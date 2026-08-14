@@ -1,0 +1,26 @@
+node_modules/
+**/node_modules/
+dist/
+.env
+.env.local
+.env.production
+uploads/
+*.log
+.DS_Store
+
+# Flutter
+apps/mobile/.dart_tool/
+apps/mobile/build/
+apps/mobile/.flutter-plugins-dependencies
+apps/mobile/.flutter-plugins
+apps/mobile/android/.gradle/
+apps/mobile/android/build/
+
+# Web / API build
+apps/web/dist/
+apps/api/dist/
+apps/api/uploads/
+
+# Secrets
+secrets/
+.cursor/

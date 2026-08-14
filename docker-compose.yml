@@ -1,0 +1,79 @@
+name: casamento
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: casamento-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-casamento}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-casamento}
+      POSTGRES_DB: ${POSTGRES_DB:-casamento}
+    ports:
+      - "${POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - casamento_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-casamento} -d ${POSTGRES_DB:-casamento}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: casamento-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-3004}:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-casamento}:${POSTGRES_PASSWORD:-casamento}@postgres:5432/${POSTGRES_DB:-casamento}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-casamento-dev-secret-change-in-prod}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-30d}
+      PORT: 3000
+      UPLOAD_DIR: ./uploads
+      BOOTSTRAP_NOIVO_EMAIL: ${BOOTSTRAP_NOIVO_EMAIL:-dyego.fernandes.vieira@gmail.com}
+      BOOTSTRAP_NOIVO_PASSWORD: ${BOOTSTRAP_NOIVO_PASSWORD:-123456}
+      BOOTSTRAP_NOIVO_NOME: ${BOOTSTRAP_NOIVO_NOME:-Dyego}
+      RUN_SEED: ${RUN_SEED:-false}
+    volumes:
+      - casamento_uploads:/app/uploads
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 45s
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.nginx
+      args:
+        VITE_PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:-http://ludmilaedyego}
+    container_name: casamento-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-8086}:80"
+      - "${WEB_HTTP_PORT:-80}:80"
+
+volumes:
+  casamento_pg_data:
+  casamento_uploads:

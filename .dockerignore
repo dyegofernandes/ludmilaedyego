@@ -1,0 +1,11 @@
+node_modules
+**/node_modules
+dist
+.git
+.env
+*.log
+apps/mobile
+apps/web/dist
+apps/api/uploads
+apps/api/dist
+**/.env

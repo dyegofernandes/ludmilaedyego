@@ -1,0 +1,73 @@
+name: casamento
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-casamento}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-casamento-change-me}
+      POSTGRES_DB: ${POSTGRES_DB:-casamento}
+    volumes:
+      - casamento_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-casamento} -d ${POSTGRES_DB:-casamento}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3004:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-casamento}:${POSTGRES_PASSWORD:-casamento-change-me}@postgres:5432/${POSTGRES_DB:-casamento}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-change-me-casamento-jwt}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-30d}
+      PORT: 3000
+      UPLOAD_DIR: ./uploads
+      BOOTSTRAP_NOIVO_EMAIL: ${BOOTSTRAP_NOIVO_EMAIL:-dyego.fernandes.vieira@gmail.com}
+      BOOTSTRAP_NOIVO_PASSWORD: ${BOOTSTRAP_NOIVO_PASSWORD:-123456}
+      BOOTSTRAP_NOIVO_NOME: ${BOOTSTRAP_NOIVO_NOME:-Dyego}
+      RUN_SEED: ${RUN_SEED:-false}
+    volumes:
+      - casamento_uploads:/app/uploads
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 45s
+
+  nginx:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.nginx
+      args:
+        VITE_PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:-http://207.180.243.108:8086}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "8086:80"
+
+volumes:
+  casamento_pg_data:
+  casamento_uploads:
