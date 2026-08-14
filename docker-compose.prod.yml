@@ -29,7 +29,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "3004:3000"
+      - "3005:3000"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-casamento}:${POSTGRES_PASSWORD:-casamento-change-me}@postgres:5432/${POSTGRES_DB:-casamento}?schema=public
       JWT_SECRET: ${JWT_SECRET:-change-me-casamento-jwt}
@@ -67,7 +67,7 @@ services:
         condition: service_healthy
     ports:
       - "80:80"
-      - "8086:80"
+      - "8087:80"
 
 volumes:
   casamento_pg_data:

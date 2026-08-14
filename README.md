@@ -29,16 +29,18 @@ deploy/
 
 O pipeline faz checkout → gera `.env` → `docker compose -f docker-compose.prod.yml -p casamento up -d --build` → healthcheck.
 
-### Portas no servidor (não conflitam com Famili / Energiago)
+### Portas no servidor (não conflitam com Amigos / Famili / Energiago)
 
 | Serviço | Porta |
 |---------|-------|
-| Casamento web (nginx) | **80** (nome ludmilaedyego) e **8086** |
-| Casamento API | **3004** |
-| Famili API | 3003 |
+| Casamento web (nginx) | **80** (ludmilaedyego) e **8087** |
+| Casamento API | **3005** |
+| Amigos web | 8086 / HTTPS 8443 |
+| Amigos API | 3004 |
 | Famili web | 8085 |
-| Energiago API | 3002 |
+| Famili API | 3003 |
 | Energiago web | 8084 |
+| Energiago API | 3002 |
 
 URLs:
 - Web: http://ludmilaedyego/
@@ -73,8 +75,8 @@ $env:RUN_SEED="true"; docker compose up -d --build
 | Serviço | URL / porta |
 |---------|-------------|
 | Web | http://ludmilaedyego/ |
-| Web (localhost) | http://localhost:8086/ |
-| API (direto) | http://localhost:3004/api/health |
+| Web (localhost) | http://localhost:8087/ |
+| API (direto) | http://localhost:3005/api/health |
 | API (via web) | http://ludmilaedyego/api/health |
 | Postgres | localhost:5434 |
 
@@ -96,13 +98,13 @@ cd c:\casamento\apps\mobile
 flutter pub get
 
 # Emulador Android:
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3004
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3005
 
 # Windows / Chrome:
-flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:3004
+flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:3005
 
 # Device físico (mesma rede):
-flutter run --dart-define=API_BASE_URL=http://IP-DA-SUA-MAQUINA:3004
+flutter run --dart-define=API_BASE_URL=http://IP-DA-SUA-MAQUINA:3005
 ```
 
 ## Desenvolvimento local (sem Docker da API/web)
@@ -165,9 +167,9 @@ Copie `.env.example` → `.env`. Principais:
 ```
 POSTGRES_PASSWORD=casamento
 JWT_SECRET=casamento-dev-secret-change-in-prod
-WEB_PORT=8086
+WEB_PORT=8087
 PUBLIC_WEB_URL=http://ludmilaedyego
-API_PORT=3004
+API_PORT=3005
 RUN_SEED=false
 ```
 

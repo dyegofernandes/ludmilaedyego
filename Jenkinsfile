@@ -33,7 +33,7 @@ RUN_SEED=${RUN_SEED:-false}
 EOF
 
           ${COMPOSE} -f ${COMPOSE_FILE} -p casamento down --remove-orphans || true
-          for p in 80 3004 8086; do
+          for p in 80 3005 8087; do
             ids=$(docker ps -q --filter "publish=${p}" || true)
             if [ -n "$ids" ]; then
               docker stop $ids || true
@@ -58,10 +58,10 @@ EOF
           for i in $(seq 1 40); do
             if ${COMPOSE} -f ${COMPOSE_FILE} -p casamento exec -T api node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then
               echo "Casamento API health ok"
-              curl -fsS http://127.0.0.1:3004/api/health || true
+              curl -fsS http://127.0.0.1:3005/api/health || true
               curl -fsS http://127.0.0.1/api/health || true
               curl -fsS -H 'Host: ludmilaedyego' http://127.0.0.1/api/health || true
-              curl -fsS http://127.0.0.1:8086/api/health || true
+              curl -fsS http://127.0.0.1:8087/api/health || true
               exit 0
             fi
             sleep 2
