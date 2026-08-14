@@ -10,7 +10,7 @@ pipeline {
     stage('Checkout') {
       steps {
         git branch: 'main',
-            url: 'https://github.com/dyegofernandes/casamento.git',
+            url: 'https://github.com/dyegofernandes/ludmilaedyego.git',
             credentialsId: 'gitHub'
       }
     }

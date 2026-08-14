@@ -16,9 +16,9 @@ deploy/
 
 ## Deploy via Jenkins (igual Famili)
 
-1. Publique o código em `https://github.com/dyegofernandes/casamento.git` (branch `main`).
+1. Publique o código em `https://github.com/dyegofernandes/ludmilaedyego.git` (branch `main`).
 2. No Jenkins, crie um job **Pipeline** → *Pipeline script from SCM*:
-   - Repo: `https://github.com/dyegofernandes/casamento.git`
+   - Repo: `https://github.com/dyegofernandes/ludmilaedyego.git`
    - Credentials: `gitHub` (mesmo do Famili / Energiago)
    - Branch: `main`
    - Script path: `Jenkinsfile`
