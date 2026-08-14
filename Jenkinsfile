@@ -25,7 +25,7 @@ POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-casamento-change-me}
 POSTGRES_DB=${POSTGRES_DB:-casamento}
 JWT_SECRET=${JWT_SECRET:-change-me-casamento-jwt}
 JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-30d}
-PUBLIC_WEB_URL=${PUBLIC_WEB_URL:-http://207.180.243.108:8086}
+PUBLIC_WEB_URL=${PUBLIC_WEB_URL:-http://ludmilaedyego}
 BOOTSTRAP_NOIVO_EMAIL=${BOOTSTRAP_NOIVO_EMAIL:-dyego.fernandes.vieira@gmail.com}
 BOOTSTRAP_NOIVO_PASSWORD=${BOOTSTRAP_NOIVO_PASSWORD:-123456}
 BOOTSTRAP_NOIVO_NOME=${BOOTSTRAP_NOIVO_NOME:-Dyego}
@@ -33,13 +33,14 @@ RUN_SEED=${RUN_SEED:-false}
 EOF
 
           ${COMPOSE} -f ${COMPOSE_FILE} -p casamento down --remove-orphans || true
-          for p in 3004 8086; do
+          for p in 80 3004 8086; do
             ids=$(docker ps -q --filter "publish=${p}" || true)
             if [ -n "$ids" ]; then
               docker stop $ids || true
               docker rm $ids || true
             fi
           done
+          grep -q 'ludmilaedyego' /etc/hosts || echo '127.0.0.1 ludmilaedyego ludmilaedyego.com' >> /etc/hosts || true
           if ! ${COMPOSE} -f ${COMPOSE_FILE} -p casamento up -d --build --force-recreate; then
             echo "Deploy failed — dumping API diagnostics" >&2
             ${COMPOSE} -f ${COMPOSE_FILE} -p casamento ps -a || true
@@ -58,6 +59,8 @@ EOF
             if ${COMPOSE} -f ${COMPOSE_FILE} -p casamento exec -T api node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then
               echo "Casamento API health ok"
               curl -fsS http://127.0.0.1:3004/api/health || true
+              curl -fsS http://127.0.0.1/api/health || true
+              curl -fsS -H 'Host: ludmilaedyego' http://127.0.0.1/api/health || true
               curl -fsS http://127.0.0.1:8086/api/health || true
               exit 0
             fi

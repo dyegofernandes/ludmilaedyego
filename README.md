@@ -25,7 +25,7 @@ deploy/
 3. (Opcional) Variables do job:
    - `JWT_SECRET`
    - `POSTGRES_PASSWORD`
-   - `PUBLIC_WEB_URL` (default `http://207.180.243.108:8086`)
+   - `PUBLIC_WEB_URL` (default `http://ludmilaedyego`)
 
 O pipeline faz checkout → gera `.env` → `docker compose -f docker-compose.prod.yml -p casamento up -d --build` → healthcheck.
 
@@ -33,19 +33,19 @@ O pipeline faz checkout → gera `.env` → `docker compose -f docker-compose.pr
 
 | Serviço | Porta |
 |---------|-------|
+| Casamento web (nginx) | **80** (nome ludmilaedyego) e **8086** |
 | Casamento API | **3004** |
-| Casamento web (nginx) | **8086** |
 | Famili API | 3003 |
 | Famili web | 8085 |
 | Energiago API | 3002 |
 | Energiago web | 8084 |
 
 URLs:
-- Web: http://207.180.243.108:8086/
-- API direta: http://207.180.243.108:3004/api/health
-- API via proxy: http://207.180.243.108:8086/api/health
+- Web: http://ludmilaedyego/
+- Web (IP): http://207.180.243.108/
+- API via nginx: http://ludmilaedyego/api/health
 
-O nginx já aceita o nome **ludmilaedyego** / **ludmilaedyego.com**. Esse nome ainda não existe no DNS da internet. Enquanto isso, convidados entram pelo IP:8086. Quando o domínio estiver registrado, aponte o DNS (registro A) para `207.180.243.108` e no Jenkins use `PUBLIC_WEB_URL=http://ludmilaedyego.com`.
+O nginx responde pelo nome **ludmilaedyego** na porta 80. Neste PC, rode como Administrador `deploy\add-hosts-ludmilaedyego.ps1` para o nome apontar ao servidor. Para o celular de qualquer convidado abrir `http://ludmilaedyego` sem configurar nada, registre `ludmilaedyego.com` e aponte o DNS A para `207.180.243.108`.
 
 ## Subir tudo (Docker local)
 

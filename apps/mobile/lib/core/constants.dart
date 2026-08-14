@@ -9,7 +9,7 @@ class AppConstants {
 
   static const webBaseUrl = String.fromEnvironment(
     'WEB_BASE_URL',
-    defaultValue: 'http://207.180.243.108:8086',
+    defaultValue: 'http://ludmilaedyego',
   );
 
   static const fallbackNomeNoivo = 'Dyego';

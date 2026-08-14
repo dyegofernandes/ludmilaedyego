@@ -5,7 +5,7 @@ WORKDIR /web
 COPY apps/web/package*.json ./
 RUN npm ci
 COPY apps/web/ ./
-ARG VITE_PUBLIC_WEB_URL=http://207.180.243.108:8086
+ARG VITE_PUBLIC_WEB_URL=http://ludmilaedyego
 ENV VITE_API_BASE=/api
 ENV VITE_PUBLIC_WEB_URL=$VITE_PUBLIC_WEB_URL
 RUN npm run build
