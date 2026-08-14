@@ -25,16 +25,15 @@ deploy/
 3. (Opcional) Variables do job:
    - `JWT_SECRET`
    - `POSTGRES_PASSWORD`
-   - `PUBLIC_WEB_URL` (default `http://ludmilaedyego`)
+   - `PUBLIC_WEB_URL` (default `http://207.180.243.108:8087`)
 
-O pipeline faz checkout → gera `.env` → `docker compose -f docker-compose.prod.yml -p casamento up -d --build` → instala o vhost no nginx do host → healthcheck.
+O pipeline faz checkout → gera `.env` → `docker compose -f docker-compose.prod.yml -p casamento up -d --build` → healthcheck.
 
 ### Portas no servidor (não conflitam com Amigos / Famili / Energiago)
 
 | Serviço | Porta |
 |---------|-------|
-| Casamento web (Docker) | **8087** |
-| Casamento via nome (nginx do host) | **80** só para `ludmilaedyego` |
+| Casamento web (nginx) | **8087** |
 | Casamento API | **3005** |
 | Amigos web | 8086 / HTTPS 8443 |
 | Amigos API | 3004 |
@@ -44,11 +43,11 @@ O pipeline faz checkout → gera `.env` → `docker compose -f docker-compose.pr
 | Energiago API | 3002 |
 
 URLs:
-- Web: http://ludmilaedyego/
-- Health: http://ludmilaedyego/api/health
-- Direto (sem nome): http://207.180.243.108:8087/
+- Web: http://207.180.243.108:8087/
+- Health: http://207.180.243.108:8087/api/health
+- Com hosts neste PC: http://ludmilaedyego:8087/
 
-O Docker **não** publica a porta 80. O nginx do VPS encaminha `Host: ludmilaedyego` para `127.0.0.1:8087`. Neste PC, rode como Administrador `deploy\add-hosts-ludmilaedyego.ps1` para o nome apontar ao servidor. Convites usam `PUBLIC_WEB_URL` sem porta.
+A produção **não** publica a porta 80 (já usada no VPS). Convites usam `PUBLIC_WEB_URL` com `:8087`.
 
 ## Subir tudo (Docker local)
 

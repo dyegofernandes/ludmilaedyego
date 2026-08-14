@@ -60,7 +60,7 @@ services:
       context: .
       dockerfile: deploy/Dockerfile.nginx
       args:
-        VITE_PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:-http://ludmilaedyego}
+        VITE_PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:-http://207.180.243.108:8087}
     restart: unless-stopped
     depends_on:
       api:

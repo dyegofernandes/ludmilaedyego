@@ -25,7 +25,7 @@ POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-casamento-change-me}
 POSTGRES_DB=${POSTGRES_DB:-casamento}
 JWT_SECRET=${JWT_SECRET:-change-me-casamento-jwt}
 JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-30d}
-PUBLIC_WEB_URL=${PUBLIC_WEB_URL:-http://ludmilaedyego}
+PUBLIC_WEB_URL=${PUBLIC_WEB_URL:-http://207.180.243.108:8087}
 BOOTSTRAP_NOIVO_EMAIL=${BOOTSTRAP_NOIVO_EMAIL:-dyego.fernandes.vieira@gmail.com}
 BOOTSTRAP_NOIVO_PASSWORD=${BOOTSTRAP_NOIVO_PASSWORD:-123456}
 BOOTSTRAP_NOIVO_NOME=${BOOTSTRAP_NOIVO_NOME:-Dyego}
@@ -48,21 +48,6 @@ EOF
             ${COMPOSE} -f ${COMPOSE_FILE} -p casamento logs nginx --tail 100 || true
             exit 1
           fi
-
-          if ! command -v nginx >/dev/null 2>&1; then
-            echo "nginx do host nao encontrado. http://ludmilaedyego exige um vhost na porta 80 apontando para 127.0.0.1:8087." >&2
-            echo "Nao vamos publicar a porta 80 no Docker (conflito no VPS). Instale nginx no host e rode o job de novo." >&2
-            exit 1
-          fi
-          mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
-          cp deploy/host-nginx-ludmilaedyego.conf /etc/nginx/sites-available/ludmilaedyego.conf
-          ln -sf /etc/nginx/sites-available/ludmilaedyego.conf /etc/nginx/sites-enabled/ludmilaedyego.conf
-          nginx -t
-          if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet nginx; then
-            systemctl reload nginx
-          else
-            nginx -s reload
-          fi
         '''
       }
     }
@@ -76,7 +61,6 @@ EOF
               echo "Casamento API health ok"
               curl -fsS http://127.0.0.1:3005/api/health || true
               curl -fsS http://127.0.0.1:8087/api/health || true
-              curl -fsS -H 'Host: ludmilaedyego' http://127.0.0.1/api/health || true
               exit 0
             fi
             sleep 2
