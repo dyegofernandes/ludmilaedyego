@@ -14,6 +14,7 @@ import {
   type Bootstrap,
   type User,
 } from './api';
+import { WELCOME_PENDING_KEY } from './components/WelcomeSlideshow';
 
 type AuthCtx = {
   token: string | null;
@@ -73,17 +74,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const res = await loginEmail(email, password);
     localStorage.setItem('access_token', res.accessToken);
+    sessionStorage.setItem(WELCOME_PENDING_KEY, '1');
     setToken(res.accessToken);
   }, []);
 
   const loginWithTokenFn = useCallback(async (tok: string) => {
     const res = await loginToken(tok);
     localStorage.setItem('access_token', res.accessToken);
+    sessionStorage.setItem(WELCOME_PENDING_KEY, '1');
     setToken(res.accessToken);
   }, []);
 
   const logout = () => {
     localStorage.removeItem('access_token');
+    sessionStorage.removeItem(WELCOME_PENDING_KEY);
     setToken(null);
     setUser(null);
     setData(null);

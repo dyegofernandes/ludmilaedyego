@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   adicionarFotos,
   atualizarFoto,
@@ -37,6 +37,11 @@ import {
 import { useAuth } from '../auth';
 import { BrandHeader } from '../components/Brand';
 import { FotoLightbox } from '../components/FotoLightbox';
+import {
+  WelcomeSlideshow,
+  clearWelcomePending,
+  isWelcomePending,
+} from '../components/WelcomeSlideshow';
 import { compactarFoto } from '../image';
 
 type Tab =
@@ -342,6 +347,23 @@ export default function HomePage() {
   const gestao = isNoivo || role === 'cerimonialista';
   const isGuest = role === 'convidado' || role === 'padrinho';
   const precisaCadastro = isGuest && !user?.temSenha;
+  const [showWelcome, setShowWelcome] = useState(
+    () => isWelcomePending() && (role === 'convidado' || role === 'padrinho'),
+  );
+
+  useEffect(() => {
+    if (!isGuest) {
+      clearWelcomePending();
+      setShowWelcome(false);
+      return;
+    }
+    if (isWelcomePending()) setShowWelcome(true);
+  }, [isGuest]);
+
+  const dismissWelcome = useCallback(() => {
+    clearWelcomePending();
+    setShowWelcome(false);
+  }, []);
 
   const totals = useMemo(() => {
     const gastos = data?.gastos ?? [];
@@ -1046,6 +1068,9 @@ export default function HomePage() {
 
   return (
     <div className="shell">
+      {showWelcome && isGuest ? (
+        <WelcomeSlideshow onDone={dismissWelcome} />
+      ) : null}
       <div className="topbar">
         <BrandHeader
           compact

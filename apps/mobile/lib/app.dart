@@ -8,6 +8,7 @@ import 'data/app_store.dart';
 import 'features/agenda/agenda_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/splash_screen.dart';
+import 'features/auth/welcome_slideshow_screen.dart';
 import 'features/cerimonialista/cerimonialista_shell.dart';
 import 'features/configuracoes/configuracoes_screen.dart';
 import 'features/convidado_home/convidado_home_screen.dart';
@@ -57,11 +58,20 @@ class _CasamentoAppState extends State<CasamentoApp> {
             !_store.isCerimonialista) {
           return _store.homeRouteForRole();
         }
+        if (logged &&
+            loc == '/welcome' &&
+            !(_store.isConvidado || _store.isPadrinho)) {
+          return _store.homeRouteForRole();
+        }
         return null;
       },
       routes: [
         GoRoute(path: '/', builder: (_, _) => const SplashScreen()),
         GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+        GoRoute(
+          path: '/welcome',
+          builder: (_, _) => const WelcomeSlideshowScreen(),
+        ),
         GoRoute(path: '/noivo', builder: (_, _) => const NoivoShell()),
         GoRoute(
           path: '/cerimonialista',

@@ -50,7 +50,7 @@ class _LoginScreenState extends State<LoginScreen>
       setState(() => _error = err);
       return;
     }
-    context.go(store.homeRouteForRole());
+    _goAfterLogin(store);
   }
 
   Future<void> _loginConvite() async {
@@ -66,7 +66,15 @@ class _LoginScreenState extends State<LoginScreen>
       setState(() => _error = err);
       return;
     }
-    context.go(store.homeRouteForRole());
+    _goAfterLogin(store);
+  }
+
+  void _goAfterLogin(AppStore store) {
+    if (store.isConvidado || store.isPadrinho) {
+      context.go('/welcome');
+    } else {
+      context.go(store.homeRouteForRole());
+    }
   }
 
   Widget _errorBox() {

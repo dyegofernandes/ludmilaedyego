@@ -121,6 +121,29 @@ class AppStore extends ChangeNotifier {
     return '/convidado';
   }
 
+  List<Foto> get fotosVisiveis => fotos.where((f) => f.publico).toList();
+
+  List<Tarefa> get minhasTarefasPadrinho {
+    final pid = meuPadrinho?.id;
+    if (pid == null) return [];
+    return tarefas
+        .where(
+          (t) => t.destino == DestinoTarefa.padrinho && t.padrinhoId == pid,
+        )
+        .toList();
+  }
+
+  DespedidaEvento? eventoDespedida(TipoDespedida tipo) {
+    try {
+      return despedidas.firstWhere((e) => e.tipo == tipo);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  List<DespedidaParticipante> participantesDespedida(TipoDespedida tipo) =>
+      despedidaParticipantes.where((p) => p.tipo == tipo).toList();
+
   List<Compromisso> compromissosDoDia(DateTime day) {
     final d = DateTime(day.year, day.month, day.day);
     return compromissos.where((c) {
