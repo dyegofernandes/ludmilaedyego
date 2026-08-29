@@ -45,14 +45,15 @@ class PadrinhosScreen extends StatelessWidget {
                   separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (_, i) {
                     final p = store.padrinhos[i];
-                    final nome =
-                        store.convidadoById(p.convidadoId)?.nome ?? '—';
+                    final conv = store.convidadoById(p.convidadoId);
+                    final nome = conv?.nomeComParceiro ?? '—';
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(nome),
                       subtitle: Text(
                         [
                           p.tipo.label,
+                          if (conv != null) 'Lado ${conv.lado.label}',
                           if (p.papel != null && p.papel!.isNotEmpty) p.papel!,
                         ].join(' · '),
                       ),
@@ -101,11 +102,39 @@ class PadrinhosScreen extends StatelessWidget {
                 items: disponiveis
                     .map((c) => DropdownMenuItem(
                           value: c.id,
-                          child: Text(c.nome),
+                          child: Text(
+                            [
+                              c.nomeComParceiro,
+                              'Lado ${c.lado.label}',
+                            ].join(' · '),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ))
                     .toList(),
                 onChanged: (v) => setLocal(() => convidadoId = v),
               ),
+              if (convidadoId != null) ...[
+                const SizedBox(height: 8),
+                Builder(
+                  builder: (_) {
+                    final c = disponiveis.firstWhere((x) => x.id == convidadoId);
+                    final parceiro = c.parceiroAcompanhante;
+                    return Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        [
+                          'Lado: ${c.lado.label}',
+                          if (parceiro != null)
+                            '${parceiro.tipo.label}: ${parceiro.nome}',
+                        ].join(' · '),
+                        style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                              color: AppColors.muted,
+                            ),
+                      ),
+                    );
+                  },
+                ),
+              ],
               const SizedBox(height: 10),
               DropdownButtonFormField<TipoPadrinho>(
                 initialValue: tipo,

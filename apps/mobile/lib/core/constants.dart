@@ -1,15 +1,15 @@
-/// API local (Docker Postgres + Nest). Override:
+/// API / site. Override em dev:
 /// flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3005
 /// flutter run --dart-define=WEB_BASE_URL=http://ludmilaedyego
 class AppConstants {
   static const apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:3001',
+    defaultValue: 'http://207.180.243.108:8087',
   );
 
   static const webBaseUrl = String.fromEnvironment(
     'WEB_BASE_URL',
-    defaultValue: 'http://ludmilaedyego',
+    defaultValue: 'http://207.180.243.108:8087',
   );
 
   static const fallbackNomeNoivo = 'Dyego';

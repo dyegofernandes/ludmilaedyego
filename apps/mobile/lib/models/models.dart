@@ -354,23 +354,52 @@ class Compromisso {
   String? criadoPor;
 }
 
-enum TipoAcompanhante { esposa, amigo, filho }
+enum TipoAcompanhante {
+  esposa,
+  esposo,
+  namorada,
+  namorado,
+  amigo,
+  filho,
+  filhoAdulto,
+}
 
 TipoAcompanhante tipoAcompanhanteFromDb(String v) => switch (v) {
       'esposa' => TipoAcompanhante.esposa,
+      'esposo' => TipoAcompanhante.esposo,
+      'namorada' => TipoAcompanhante.namorada,
+      'namorado' => TipoAcompanhante.namorado,
       'filho' => TipoAcompanhante.filho,
+      'filho_adulto' => TipoAcompanhante.filhoAdulto,
       _ => TipoAcompanhante.amigo,
     };
 
 extension TipoAcompanhanteX on TipoAcompanhante {
-  String get dbValue => name;
+  String get dbValue => switch (this) {
+        TipoAcompanhante.filhoAdulto => 'filho_adulto',
+        _ => name,
+      };
+
   String get label => switch (this) {
-        TipoAcompanhante.esposa => 'Esposa/esposo',
+        TipoAcompanhante.esposa => 'Esposa',
+        TipoAcompanhante.esposo => 'Esposo',
+        TipoAcompanhante.namorada => 'Namorada',
+        TipoAcompanhante.namorado => 'Namorado',
         TipoAcompanhante.amigo => 'Amigo(a)',
-        TipoAcompanhante.filho => 'Filho(a)',
+        TipoAcompanhante.filho => 'Filho(a) criança',
+        TipoAcompanhante.filhoAdulto => 'Filho(a)',
       };
 
   bool get isCrianca => this == TipoAcompanhante.filho;
+
+  bool get isParceiro => switch (this) {
+        TipoAcompanhante.esposa ||
+        TipoAcompanhante.esposo ||
+        TipoAcompanhante.namorada ||
+        TipoAcompanhante.namorado =>
+          true,
+        _ => false,
+      };
 }
 
 class Acompanhante {
@@ -443,6 +472,21 @@ class Convidado {
       acompanhantesLista
           .where((a) => a.rsvp == RsvpStatus.sim && a.tipo.isCrianca)
           .length;
+
+  /// Cônjuge/namorado(a) cadastrado como acompanhante, se houver.
+  Acompanhante? get parceiroAcompanhante {
+    for (final a in acompanhantesLista) {
+      if (a.tipo.isParceiro && a.nome.trim().isNotEmpty) return a;
+    }
+    return null;
+  }
+
+  /// Nome do titular com o parceiro, ex.: "Carlos & Marina".
+  String get nomeComParceiro {
+    final p = parceiroAcompanhante;
+    if (p == null) return nome;
+    return '$nome & ${p.nome.trim()}';
+  }
 }
 
 /// Convite por token (cerimonialista, ou convidado/padrinho sem e-mail).

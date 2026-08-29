@@ -67,13 +67,21 @@ export class DataService {
 
   private normalizeAcomps(raw: unknown, convidadoId?: string) {
     if (!Array.isArray(raw)) return [];
+    const tiposOk = new Set([
+      'esposa',
+      'esposo',
+      'namorada',
+      'namorado',
+      'amigo',
+      'filho',
+      'filho_adulto',
+    ]);
     return raw
       .filter((a) => a && String(a.nome ?? '').trim())
       .map((a: any, i: number) => ({
         id: String(a.id || (convidadoId ? `ac-${convidadoId}-${i}` : `ac-${i}`)),
         nome: String(a.nome).trim(),
-        tipo:
-          a.tipo === 'esposa' || a.tipo === 'filho' ? a.tipo : 'amigo',
+        tipo: tiposOk.has(a.tipo) ? a.tipo : 'amigo',
         rsvp: ['sim', 'nao', 'talvez', 'pendente'].includes(a.rsvp)
           ? a.rsvp
           : 'pendente',

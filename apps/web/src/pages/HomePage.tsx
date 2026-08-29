@@ -63,12 +63,82 @@ type Tab =
   | 'fotos'
   | 'conta';
 
+type AcompanhanteTipo =
+  | 'esposa'
+  | 'esposo'
+  | 'namorada'
+  | 'namorado'
+  | 'amigo'
+  | 'filho'
+  | 'filho_adulto';
+
 type Acompanhante = {
   id?: string;
   nome: string;
-  tipo: 'esposa' | 'amigo' | 'filho';
+  tipo: AcompanhanteTipo;
   rsvp?: 'pendente' | 'sim' | 'nao' | 'talvez';
 };
+
+const ACOMP_TIPOS: AcompanhanteTipo[] = [
+  'esposa',
+  'esposo',
+  'namorada',
+  'namorado',
+  'amigo',
+  'filho',
+  'filho_adulto',
+];
+
+const ACOMP_TIPO_LABEL: Record<AcompanhanteTipo, string> = {
+  esposa: 'Esposa',
+  esposo: 'Esposo',
+  namorada: 'Namorada',
+  namorado: 'Namorado',
+  amigo: 'Amigo(a)',
+  filho: 'Filho(a) criança',
+  filho_adulto: 'Filho(a)',
+};
+
+const ACOMP_PARCEIRO = new Set<AcompanhanteTipo>([
+  'esposa',
+  'esposo',
+  'namorada',
+  'namorado',
+]);
+
+function normalizeAcompTipo(v: unknown): AcompanhanteTipo {
+  return ACOMP_TIPOS.includes(v as AcompanhanteTipo)
+    ? (v as AcompanhanteTipo)
+    : 'amigo';
+}
+
+function ladoLabel(lado?: string) {
+  if (lado === 'noivo') return 'Noivo';
+  if (lado === 'noiva') return 'Noiva';
+  return 'Ambos';
+}
+
+function parceiroDe(c: any): Acompanhante | null {
+  const lista = Array.isArray(c?.acompanhantesLista)
+    ? c.acompanhantesLista
+    : Array.isArray(c?.acompanhantes)
+      ? c.acompanhantes
+      : [];
+  for (const a of lista) {
+    const tipo = normalizeAcompTipo(a?.tipo);
+    const nome = String(a?.nome ?? '').trim();
+    if (ACOMP_PARCEIRO.has(tipo) && nome) {
+      return { id: a.id, nome, tipo, rsvp: a.rsvp };
+    }
+  }
+  return null;
+}
+
+function nomeComParceiro(c: any): string {
+  const nome = String(c?.nome ?? 'Convidado');
+  const p = parceiroDe(c);
+  return p ? `${nome} & ${p.nome}` : nome;
+}
 type TipoDespedida = 'solteiro' | 'solteira';
 
 const TAB_KEY = 'casamento_tab';
@@ -490,13 +560,18 @@ export default function HomePage() {
       });
       for (const a of ac) {
         const isKid = a.tipo === 'filho';
+        const tipo = normalizeAcompTipo(a.tipo);
         out.push({
           id: String(a.id || `${c.id}-${a.nome}`),
           nome: String(a.nome ?? 'Acompanhante'),
           rsvp: String(a.rsvp ?? 'pendente'),
           idade: isKid ? 'crianca' : 'adulto',
           detalhe: `Acompanhante de ${c.nome}${
-            isKid ? ' · criança' : a.tipo === 'esposa' ? ' · esposo(a)' : ''
+            isKid
+              ? ' · criança'
+              : ACOMP_PARCEIRO.has(tipo)
+                ? ` · ${ACOMP_TIPO_LABEL[tipo].toLowerCase()}`
+                : ''
           }`,
         });
       }
@@ -1315,10 +1390,7 @@ export default function HomePage() {
       lista.map((a: any) => ({
         id: a.id,
         nome: a.nome ?? '',
-        tipo: (a.tipo === 'esposa' || a.tipo === 'filho' ? a.tipo : 'amigo') as
-          | 'esposa'
-          | 'amigo'
-          | 'filho',
+        tipo: normalizeAcompTipo(a.tipo),
         rsvp: (['sim', 'nao', 'talvez', 'pendente'].includes(a.rsvp)
           ? a.rsvp
           : 'pendente') as Acompanhante['rsvp'],
@@ -1557,9 +1629,7 @@ export default function HomePage() {
                   detalhe={`Acompanhante · ${
                     a.tipo === 'filho'
                       ? 'criança'
-                      : a.tipo === 'esposa'
-                        ? 'esposo(a)'
-                        : 'amigo(a)'
+                      : ACOMP_TIPO_LABEL[normalizeAcompTipo(a.tipo)].toLowerCase()
                   } — confirme a presença desta pessoa`}
                   atual={a.rsvp || 'pendente'}
                   busy={busy || !a.id}
@@ -1736,7 +1806,8 @@ export default function HomePage() {
                       return (
                         <div key={p.id} className="summary-tile">
                           <span>
-                            {conv?.nome ?? 'Convidado'}
+                            {nomeComParceiro(conv)}
+                            {conv?.lado ? ` · ${ladoLabel(conv.lado)}` : ''}
                             {p.papel ? ` · ${p.papel}` : ''}
                           </span>
                           <strong className="badge">
@@ -2156,8 +2227,12 @@ export default function HomePage() {
                       }}
                     >
                       <option value="esposa">Esposa</option>
-                      <option value="amigo">Amigo</option>
-                      <option value="filho">Filho (criança)</option>
+                      <option value="esposo">Esposo</option>
+                      <option value="namorada">Namorada</option>
+                      <option value="namorado">Namorado</option>
+                      <option value="amigo">Amigo(a)</option>
+                      <option value="filho_adulto">Filho(a)</option>
+                      <option value="filho">Filho(a) criança</option>
                     </select>
                   </div>
                   <div>
@@ -2284,56 +2359,70 @@ export default function HomePage() {
                   <p>
                     Acomps:{' '}
                     {c.acompanhantesLista
-                      .map(
-                        (a: any) =>
-                          `${a.nome} (${a.tipo}${a.rsvp ? ` · ${rsvpLabel(a.rsvp)}` : ''})`,
-                      )
+                      .map((a: any) => {
+                        const tipo = normalizeAcompTipo(a.tipo);
+                        return `${a.nome} (${ACOMP_TIPO_LABEL[tipo]}${
+                          a.rsvp ? ` · ${rsvpLabel(a.rsvp)}` : ''
+                        })`;
+                      })
                       .join(', ')}
                   </p>
                 )}
               {gestao && (
-                <div className="row">
-                  <button
-                    className="ghost"
-                    disabled={busy}
-                    onClick={() => editConvidado(c)}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    className="ghost"
-                    disabled={busy}
-                    onClick={() => onCopiarLinkConvidado(c.id, c.token)}
-                  >
-                    Copiar link
-                  </button>
-                  <button
-                    className="ghost"
-                    disabled={busy}
-                    onClick={() =>
-                      onEnviarWhatsAppConvidado(c.id, {
-                        token: c.token,
-                        nome: c.nome,
-                        telefone: c.telefone,
-                      })
-                    }
-                  >
-                    Enviar convite WhatsApp
-                  </button>
-                  <button
-                    className="ghost"
-                    style={{ color: '#b84a4a' }}
-                    disabled={busy}
-                    onClick={() =>
-                      run(
-                        () => deleteConvidado(token!, c.id),
-                        'Convidado excluído',
-                      )
-                    }
-                  >
-                    Excluir
-                  </button>
-                </div>
+                <>
+                  <p className="hint" style={{ textAlign: 'left', wordBreak: 'break-all' }}>
+                    Link de acesso:{' '}
+                    {c.token ? (
+                      <a href={conviteLink(c.token)} target="_blank" rel="noreferrer">
+                        {conviteLink(c.token)}
+                      </a>
+                    ) : (
+                      <span>ainda não gerado</span>
+                    )}
+                  </p>
+                  <div className="row">
+                    <button
+                      className="ghost"
+                      disabled={busy}
+                      onClick={() => editConvidado(c)}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      className="ghost"
+                      disabled={busy}
+                      onClick={() => onCopiarLinkConvidado(c.id, c.token)}
+                    >
+                      Copiar link
+                    </button>
+                    <button
+                      className="ghost"
+                      disabled={busy}
+                      onClick={() =>
+                        onEnviarWhatsAppConvidado(c.id, {
+                          token: c.token,
+                          nome: c.nome,
+                          telefone: c.telefone,
+                        })
+                      }
+                    >
+                      Enviar convite WhatsApp
+                    </button>
+                    <button
+                      className="ghost"
+                      style={{ color: '#b84a4a' }}
+                      disabled={busy}
+                      onClick={() =>
+                        run(
+                          () => deleteConvidado(token!, c.id),
+                          'Convidado excluído',
+                        )
+                      }
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           ))}
@@ -2358,10 +2447,26 @@ export default function HomePage() {
                 <option value="">Selecione…</option>
                 {convidadosDisponiveis.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.nome}
+                    {nomeComParceiro(c)} · {ladoLabel(c.lado)}
                   </option>
                 ))}
               </select>
+              {padConvidadoId &&
+                (() => {
+                  const c = convidadosDisponiveis.find(
+                    (x) => x.id === padConvidadoId,
+                  );
+                  const parceiro = c ? parceiroDe(c) : null;
+                  if (!c) return null;
+                  return (
+                    <p className="hint" style={{ textAlign: 'left' }}>
+                      Lado: {ladoLabel(c.lado)}
+                      {parceiro
+                        ? ` · ${ACOMP_TIPO_LABEL[parceiro.tipo]}: ${parceiro.nome}`
+                        : ''}
+                    </p>
+                  );
+                })()}
               {convidadosDisponiveis.length === 0 && (
                 <p className="hint" style={{ textAlign: 'left' }}>
                   Todos os convidados já estão vinculados, ou ainda não há
@@ -2394,13 +2499,18 @@ export default function HomePage() {
           ) : (
             (data?.padrinhos ?? []).map((p) => {
               const conv = convidadoById.get(p.convidadoId);
+              const parceiro = conv ? parceiroDe(conv) : null;
               return (
                 <div key={p.id} className="item">
-                  <h3>{conv?.nome ?? 'Convidado'}</h3>
+                  <h3>{nomeComParceiro(conv)}</h3>
                   <p>
                     <span className="badge">
                       {p.tipo === 'madrinha' ? 'Madrinha' : 'Padrinho'}
                     </span>
+                    {conv?.lado ? ` · Lado ${ladoLabel(conv.lado)}` : ''}
+                    {parceiro
+                      ? ` · ${ACOMP_TIPO_LABEL[parceiro.tipo]}: ${parceiro.nome}`
+                      : ''}
                     {p.papel ? ` · ${p.papel}` : ''}
                     {conv?.telefone ? ` · ${conv.telefone}` : ''}
                   </p>

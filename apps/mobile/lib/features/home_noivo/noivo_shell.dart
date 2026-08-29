@@ -97,7 +97,7 @@ List<_ResumoFiltro> _buildResumoFiltros(AppStore store) {
         rsvp: a.rsvp,
         crianca: kid,
         detalhe:
-            'Acompanhante de ${c.nome}${kid ? ' · criança' : a.tipo == TipoAcompanhante.esposa ? ' · esposo(a)' : ''}',
+            'Acompanhante de ${c.nome}${kid ? ' · criança' : a.tipo.isParceiro ? ' · ${a.tipo.label.toLowerCase()}' : ''}',
       ));
     }
   }

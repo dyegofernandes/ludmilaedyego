@@ -113,21 +113,41 @@ class _ConvidadosScreenState extends State<ConvidadosScreen> {
               separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (_, i) {
                 final c = list[i];
+                final link =
+                    c.token == null ? null : AppConstants.conviteUrl(c.token!);
                 return ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(c.nome),
-                  subtitle: Text(
-                    [
-                      c.lado.label,
-                      if (c.ehCrianca) 'Criança',
-                      '${c.totalPessoas} pessoa(s)',
-                      if (c.acompanhantes > 0)
-                        c.acompanhantesLista
-                            .map((a) => '${a.nome} (${a.rsvp.label})')
-                            .join(', '),
-                      c.rsvp.label,
-                    ].join(' · '),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        [
+                          c.lado.label,
+                          if (c.ehCrianca) 'Criança',
+                          '${c.totalPessoas} pessoa(s)',
+                          if (c.acompanhantes > 0)
+                            c.acompanhantesLista
+                                .map((a) =>
+                                    '${a.nome} (${a.tipo.label} · ${a.rsvp.label})')
+                                .join(', '),
+                          c.rsvp.label,
+                        ].join(' · '),
+                      ),
+                      if (link != null) ...[
+                        const SizedBox(height: 4),
+                        SelectableText(
+                          link,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                          onTap: () => _copiarLink(context, c),
+                        ),
+                      ],
+                    ],
                   ),
+                  isThreeLine: link != null,
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -302,7 +322,7 @@ class _ConvidadosScreenState extends State<ConvidadosScreen> {
                         DropdownButtonFormField<TipoAcompanhante>(
                           initialValue: acompanham[i].tipo,
                           decoration: const InputDecoration(
-                            labelText: 'Tipo (filho = criança)',
+                            labelText: 'Tipo',
                           ),
                           items: TipoAcompanhante.values
                               .map((t) => DropdownMenuItem(
