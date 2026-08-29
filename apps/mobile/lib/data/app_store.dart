@@ -808,6 +808,29 @@ class AppStore extends ChangeNotifier {
     }
   }
 
+  /// Envia a imagem e devolve a URL pública. Em falha, lança [ApiException]/
+  Future<String> uploadPresenteImagem(
+    Uint8List bytes,
+    String filename,
+  ) async {
+    final res = await _api.postMultipart(
+      '/api/presentes/imagem',
+      fields: const {},
+      files: [
+        http.MultipartFile.fromBytes(
+          'file',
+          bytes,
+          filename: filename,
+        ),
+      ],
+    );
+    final url = res['url']?.toString();
+    if (url == null || url.isEmpty) {
+      throw ApiException('Falha ao enviar a imagem');
+    }
+    return url;
+  }
+
   Future<String?> reservarPresente(String presenteId) async {
     try {
       await _api.post('/api/presentes/$presenteId/reservar', {});

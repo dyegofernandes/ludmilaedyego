@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants.dart';
+import '../../core/invite_message.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/brand_widgets.dart';
 import '../../data/app_store.dart';
@@ -127,10 +128,20 @@ class _ConvidadosScreenState extends State<ConvidadosScreen> {
                       c.rsvp.label,
                     ].join(' · '),
                   ),
-                  trailing: IconButton(
-                    tooltip: 'Copiar link',
-                    icon: const Icon(Icons.link),
-                    onPressed: () => _copiarLink(context, c),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        tooltip: 'Enviar convite no WhatsApp',
+                        icon: const Icon(Icons.videocam_outlined),
+                        onPressed: () => _enviarWhatsApp(context, c),
+                      ),
+                      IconButton(
+                        tooltip: 'Copiar link',
+                        icon: const Icon(Icons.link),
+                        onPressed: () => _copiarLink(context, c),
+                      ),
+                    ],
                   ),
                   onTap: () => _form(context, c),
                 );
@@ -351,9 +362,29 @@ class _ConvidadosScreenState extends State<ConvidadosScreen> {
                   TextButton(
                     onPressed: () async {
                       await store.regenerarTokenConvidado(existing!.id);
-                      setLocal(() => token = store.convidadoById(existing.id)?.token);
+                      setLocal(
+                        () => token = store.convidadoById(existing.id)?.token,
+                      );
                     },
                     child: const Text('Gerar novo link'),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      final code = token;
+                      if (code == null || !ctx.mounted) return;
+                      final c = Convidado(
+                        id: existing!.id,
+                        nome: nome.text.trim().isEmpty
+                            ? (existing.nome)
+                            : nome.text.trim(),
+                        telefone: tel.text.trim().isEmpty
+                            ? existing.telefone
+                            : tel.text.trim(),
+                        token: code,
+                      );
+                      await _enviarWhatsApp(ctx, c);
+                    },
+                    child: const Text('Enviar convite no WhatsApp'),
                   ),
                 ],
               ],
@@ -443,6 +474,38 @@ class _ConvidadosScreenState extends State<ConvidadosScreen> {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Link copiado')),
+      );
+    }
+  }
+
+  Future<void> _enviarWhatsApp(BuildContext context, Convidado c) async {
+    final store = context.read<AppStore>();
+    var code = c.token;
+    if (code == null || code.isEmpty) {
+      await store.regenerarTokenConvidado(c.id);
+      code = store.convidadoById(c.id)?.token;
+    }
+    if (code == null || !context.mounted) return;
+
+    final link = AppConstants.conviteUrl(code);
+    final caption = InviteMessage.caption(link: link);
+
+    try {
+      await InviteMessage.shareSlideshowAlbum(caption: caption);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Escolha o WhatsApp — convite, vídeo e link de confirmação.',
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível compartilhar o convite'),
+        ),
       );
     }
   }

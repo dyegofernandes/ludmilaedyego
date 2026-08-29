@@ -340,6 +340,20 @@ button.ghost:hover {
   box-shadow: var(--shadow-hover);
 }
 
+button.stat {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.stat-click:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
 .stat strong {
   display: block;
   font-size: 1.45rem;
@@ -370,6 +384,86 @@ button.ghost:hover {
 .summary-tile strong {
   color: var(--gold-dark);
   font-weight: 800;
+}
+
+button.summary-tile {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.summary-tile-click:hover {
+  background: rgba(183, 151, 94, 0.12);
+  border-color: rgba(183, 151, 94, 0.35);
+  transform: translateY(-1px);
+}
+
+.resumo-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: rgba(42, 37, 31, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.resumo-modal__panel {
+  width: min(920px, 100%);
+  max-height: min(86vh, 820px);
+  overflow: auto;
+  background: var(--surface-solid);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-hover);
+  padding: 22px 22px 28px;
+}
+
+.resumo-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.resumo-modal__head h2 {
+  margin: 0;
+  font-size: 1.55rem;
+  color: var(--gold-dark);
+}
+
+.resumo-modal__panel select {
+  margin-bottom: 8px;
+}
+
+.resumo-nome-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.resumo-nome-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(183, 151, 94, 0.08);
+  border: 1px solid var(--line);
+}
+
+.resumo-nome-card strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.resumo-nome-card span {
+  color: var(--muted);
+  font-size: 0.86rem;
 }
 
 .nav {
@@ -429,6 +523,40 @@ button.ghost:hover {
   margin: 0;
   color: var(--muted);
   font-size: 0.92rem;
+}
+
+.presente-item {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.presente-item__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.presente-thumb {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 12px;
+  flex-shrink: 0;
+  background: rgba(47, 42, 36, 0.06);
+}
+
+.presente-form-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 12px;
+}
+
+.presente-form-preview img {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 12px;
 }
 
 .row {
@@ -851,13 +979,30 @@ button.danger {
   z-index: 3;
   border: 0;
   background: transparent;
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(255, 255, 252, 0.92);
   font-family: Outfit, system-ui, sans-serif;
   font-size: 15px;
   font-weight: 500;
   letter-spacing: 0.03em;
   padding: 10px 14px;
   cursor: pointer;
+}
+
+.welcome-slideshow__music {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: 14px;
+  z-index: 3;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  background: rgba(20, 16, 12, 0.35);
+  color: rgba(255, 252, 248, 0.95);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
 }
 
 .welcome-slideshow__copy {
@@ -898,6 +1043,16 @@ button.danger {
   height: 1.5px;
   margin: 16px auto 0;
   background: rgba(183, 151, 94, 0.9);
+}
+
+.welcome-slideshow__date {
+  margin: 14px 0 0;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: clamp(1.05rem, 2.8vw, 1.35rem);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: rgba(183, 151, 94, 0.95);
+  text-transform: none;
 }
 
 .welcome-slideshow__footer {
@@ -963,5 +1118,10 @@ button.danger {
   border: 0;
   background: transparent;
   cursor: pointer;
+}
+
+.welcome-slideshow--entering .welcome-slideshow__copy {
+  bottom: 50%;
+  transform: translateY(50%);
 }
 

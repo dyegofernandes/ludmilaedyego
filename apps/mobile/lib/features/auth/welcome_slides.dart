@@ -5,6 +5,10 @@ class WelcomeSlide {
   final String phrase;
 }
 
+/// Data do casamento — slide de abertura e vídeo do convite.
+const weddingDateLabel = '17 de outubro de 2026';
+const weddingDateShort = '17/10/2026';
+
 const welcomeSlides = [
   WelcomeSlide(
     asset: 'assets/welcome/01.jpg',

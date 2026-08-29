@@ -358,7 +358,10 @@ export class DataService {
 
   async removerPresente(userId: string, id: string) {
     await this.assertGestao(userId);
+    const existing = await this.prisma.presente.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Presente não encontrado');
     await this.prisma.presente.delete({ where: { id } });
+    this.unlinkUpload(existing.imagemUrl);
     return { ok: true };
   }
 
@@ -419,18 +422,48 @@ export class DataService {
 
   async upsertPresente(userId: string, body: any) {
     await this.assertGestao(userId);
-    const data = {
+    const data: {
+      nome: string;
+      descricao: string | null;
+      link: string | null;
+      valorEstimado: number | null;
+      ativo: boolean;
+      imagemUrl?: string | null;
+    } = {
       nome: body.nome,
       descricao: body.descricao ?? null,
       link: body.link ?? null,
       valorEstimado: body.valorEstimado ?? null,
-      imagemUrl: body.imagemUrl ?? null,
       ativo: body.ativo ?? true,
     };
+    let oldImagemUrl: string | null = null;
+    if ('imagemUrl' in body) {
+      data.imagemUrl = body.imagemUrl ?? null;
+      if (body.id) {
+        const existing = await this.prisma.presente.findUnique({
+          where: { id: body.id },
+        });
+        if (existing?.imagemUrl && existing.imagemUrl !== data.imagemUrl) {
+          oldImagemUrl = existing.imagemUrl;
+        }
+      }
+    }
     const p = body.id
       ? await this.prisma.presente.update({ where: { id: body.id }, data })
       : await this.prisma.presente.create({ data });
+    if (oldImagemUrl) this.unlinkUpload(oldImagemUrl);
     return { ...p, valorEstimado: this.dec(p.valorEstimado) };
+  }
+
+  async uploadPresenteImagem(
+    userId: string,
+    file?: { filename: string },
+  ) {
+    await this.assertGestao(userId);
+    if (!file?.filename) {
+      throw new BadRequestException('Selecione uma imagem');
+    }
+    return { url: publicFotoUrl(file.filename) };
   }
 
   async reservarPresente(userId: string, presenteId: string) {

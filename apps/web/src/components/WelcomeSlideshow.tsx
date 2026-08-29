@@ -1,6 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export const WELCOME_PENDING_KEY = 'welcome_pending';
+
+/** Data do casamento — exibida no slide e no vídeo do convite. */
+export const WEDDING_DATE_LABEL = '17 de outubro de 2026';
+export const WEDDING_DATE_SHORT = '17/10/2026';
+
+/** Trilha do slideshow (substitua o MP3 por Perfect acústico licenciado). */
+export const WELCOME_MUSIC = '/welcome/bg-music.mp3';
 
 export const welcomeSlides = [
   {
@@ -37,37 +44,92 @@ export const welcomeSlides = [
 
 type Props = {
   onDone: () => void;
+  /** Se false, no último slide espera o botão (não avança sozinho). Default true. */
+  autoFinish?: boolean;
+  skipLabel?: string;
+  continueLabel?: string;
 };
 
-export function WelcomeSlideshow({ onDone }: Props) {
+export function WelcomeSlideshow({
+  onDone,
+  autoFinish = true,
+  skipLabel = 'Pular',
+  continueLabel = 'Continuar',
+}: Props) {
   const [index, setIndex] = useState(0);
+  const [musicOn, setMusicOn] = useState(true);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const last = index >= welcomeSlides.length - 1;
   const slide = welcomeSlides[index];
+
+  const stopMusic = useCallback(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    a.pause();
+    a.currentTime = 0;
+  }, []);
+
+  const finish = useCallback(() => {
+    stopMusic();
+    onDone();
+  }, [onDone, stopMusic]);
 
   const goNext = useCallback(() => {
     setIndex((i) => Math.min(i + 1, welcomeSlides.length - 1));
   }, []);
 
   useEffect(() => {
+    const audio = new Audio(WELCOME_MUSIC);
+    audio.loop = true;
+    audio.volume = 0.55;
+    audio.preload = 'auto';
+    audioRef.current = audio;
+    const tryPlay = () => {
+      void audio.play().catch(() => {
+        /* autoplay bloqueado — usuário liga pelo botão */
+        setMusicOn(false);
+      });
+    };
+    tryPlay();
+    return () => {
+      audio.pause();
+      audioRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (musicOn) {
+      void a.play().catch(() => setMusicOn(false));
+    } else {
+      a.pause();
+    }
+  }, [musicOn]);
+
+  useEffect(() => {
     const id = window.setTimeout(() => {
-      if (index >= welcomeSlides.length - 1) onDone();
-      else setIndex((i) => i + 1);
+      if (index >= welcomeSlides.length - 1) {
+        if (autoFinish) finish();
+        return;
+      }
+      setIndex((i) => i + 1);
     }, 4500);
     return () => window.clearTimeout(id);
-  }, [index, onDone]);
+  }, [index, finish, autoFinish]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onDone();
+      if (e.key === 'Escape') finish();
       if (e.key === 'ArrowRight') {
-        if (last) onDone();
+        if (last) finish();
         else goNext();
       }
       if (e.key === 'ArrowLeft') setIndex((i) => Math.max(0, i - 1));
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [goNext, last, onDone]);
+  }, [goNext, last, finish]);
 
   return (
     <div className="welcome-slideshow" role="dialog" aria-modal="true">
@@ -83,10 +145,18 @@ export function WelcomeSlideshow({ onDone }: Props) {
       <div className="welcome-slideshow__shade" />
       <button
         type="button"
-        className="welcome-slideshow__skip"
-        onClick={onDone}
+        className="welcome-slideshow__music"
+        onClick={() => setMusicOn((v) => !v)}
+        aria-label={musicOn ? 'Pausar música' : 'Tocar música'}
       >
-        Pular
+        {musicOn ? '♪' : '♬'}
+      </button>
+      <button
+        type="button"
+        className="welcome-slideshow__skip"
+        onClick={finish}
+      >
+        {skipLabel}
       </button>
       <div className="welcome-slideshow__copy">
         {'eyebrow' in slide && slide.eyebrow ? (
@@ -94,6 +164,7 @@ export function WelcomeSlideshow({ onDone }: Props) {
         ) : null}
         <h2 className={index === 1 ? 'is-names' : undefined}>{slide.phrase}</h2>
         <span className="welcome-slideshow__rule" />
+        <p className="welcome-slideshow__date">{WEDDING_DATE_LABEL}</p>
       </div>
       <div className="welcome-slideshow__footer">
         <div className="welcome-slideshow__dots" aria-hidden="true">
@@ -111,9 +182,9 @@ export function WelcomeSlideshow({ onDone }: Props) {
           <button
             type="button"
             className="welcome-slideshow__continue"
-            onClick={onDone}
+            onClick={finish}
           >
-            Continuar
+            {continueLabel}
           </button>
         ) : (
           <button
@@ -131,7 +202,7 @@ export function WelcomeSlideshow({ onDone }: Props) {
         className="welcome-slideshow__hit"
         aria-label="Próximo slide"
         onClick={() => {
-          if (last) onDone();
+          if (last) finish();
           else goNext();
         }}
       />

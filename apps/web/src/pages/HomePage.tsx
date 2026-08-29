@@ -30,6 +30,7 @@ import {
   upsertDespedidaParticipante,
   upsertGasto,
   upsertPresente,
+  uploadPresenteImagem,
   upsertTarefa,
   vincularPadrinho,
   type User,
@@ -43,6 +44,10 @@ import {
   isWelcomePending,
 } from '../components/WelcomeSlideshow';
 import { compactarFoto } from '../image';
+import {
+  buildConviteWhatsAppCaption,
+  shareConviteSlideshow,
+} from '../inviteMessage';
 
 type Tab =
   | 'resumo'
@@ -286,6 +291,15 @@ export default function HomePage() {
   const [presenteId, setPresenteId] = useState<string | null>(null);
   const [presenteNome, setPresenteNome] = useState('');
   const [presenteValor, setPresenteValor] = useState('');
+  const [presenteImagemUrl, setPresenteImagemUrl] = useState<string | null>(
+    null,
+  );
+  const [presenteImagemFile, setPresenteImagemFile] = useState<File | null>(
+    null,
+  );
+  const [presenteImagemPreview, setPresenteImagemPreview] = useState<
+    string | null
+  >(null);
 
   const [cerimNome, setCerimNome] = useState('');
 
@@ -341,24 +355,31 @@ export default function HomePage() {
   const [fotoArquivos, setFotoArquivos] = useState<File[]>([]);
   const [fotoPreviews, setFotoPreviews] = useState<string[]>([]);
   const [fotoAberta, setFotoAberta] = useState<string | null>(null);
+  const [resumoDetail, setResumoDetail] = useState<{
+    title: string;
+    filterKey: string;
+  } | null>(null);
 
   const role = user?.role ?? 'convidado';
   const isNoivo = role === 'noivo';
   const gestao = isNoivo || role === 'cerimonialista';
   const isGuest = role === 'convidado' || role === 'padrinho';
   const precisaCadastro = isGuest && !user?.temSenha;
-  const [showWelcome, setShowWelcome] = useState(
-    () => isWelcomePending() && (role === 'convidado' || role === 'padrinho'),
-  );
+  const [showWelcome, setShowWelcome] = useState(false);
 
+  // Garante o slide após login/convite (token + bootstrap prontos)
   useEffect(() => {
-    if (!isGuest) {
-      clearWelcomePending();
-      setShowWelcome(false);
+    if (!user) return;
+    const guest = user.role === 'convidado' || user.role === 'padrinho';
+    if (guest && isWelcomePending()) {
+      setShowWelcome(true);
       return;
     }
-    if (isWelcomePending()) setShowWelcome(true);
-  }, [isGuest]);
+    if (!guest) {
+      clearWelcomePending();
+      setShowWelcome(false);
+    }
+  }, [user]);
 
   const dismissWelcome = useCallback(() => {
     clearWelcomePending();
@@ -445,6 +466,165 @@ export default function HomePage() {
         .length,
     };
   }, [data]);
+
+  type PessoaLinha = {
+    id: string;
+    nome: string;
+    rsvp: string;
+    idade: 'adulto' | 'crianca';
+    detalhe: string;
+  };
+
+  const pessoasLinhas = useMemo(() => {
+    const out: PessoaLinha[] = [];
+    for (const c of data?.convidados ?? []) {
+      const ac = Array.isArray(c.acompanhantesLista)
+        ? c.acompanhantesLista
+        : [];
+      out.push({
+        id: String(c.id),
+        nome: String(c.nome ?? 'Sem nome'),
+        rsvp: String(c.rsvp ?? 'pendente'),
+        idade: c.ehCrianca ? 'crianca' : 'adulto',
+        detalhe: c.ehCrianca ? 'Criança' : 'Titular',
+      });
+      for (const a of ac) {
+        const isKid = a.tipo === 'filho';
+        out.push({
+          id: String(a.id || `${c.id}-${a.nome}`),
+          nome: String(a.nome ?? 'Acompanhante'),
+          rsvp: String(a.rsvp ?? 'pendente'),
+          idade: isKid ? 'crianca' : 'adulto',
+          detalhe: `Acompanhante de ${c.nome}${
+            isKid ? ' · criança' : a.tipo === 'esposa' ? ' · esposo(a)' : ''
+          }`,
+        });
+      }
+    }
+    return out;
+  }, [data]);
+
+  const resumoFiltros: Record<
+    string,
+    { label: string; items: { nome: string; meta?: string }[] }
+  > = useMemo(() => {
+    const pessoas = (pred: (p: PessoaLinha) => boolean) =>
+      pessoasLinhas.filter(pred).map((p) => ({
+        nome: p.nome,
+        meta: `${rsvpLabel(p.rsvp)} · ${p.detalhe}`,
+      }));
+
+    const gastos = (data?.gastos ?? []).filter((g) => g.status !== 'cancelado');
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    return {
+      previsto: {
+        label: 'Gastos previstos',
+        items: gastos.map((g) => ({
+          nome: String(g.descricao ?? 'Gasto'),
+          meta: `${money(Number(g.valorPrevisto || 0))} · ${g.categoria || '—'}`,
+        })),
+      },
+      pago: {
+        label: 'Gastos pagos',
+        items: gastos
+          .filter((g) => g.status === 'pago')
+          .map((g) => ({
+            nome: String(g.descricao ?? 'Gasto'),
+            meta: money(Number(g.valorReal ?? g.valorPrevisto ?? 0)),
+          })),
+      },
+      restante: {
+        label: 'Gastos pendentes',
+        items: gastos
+          .filter((g) => g.status === 'pendente')
+          .map((g) => ({
+            nome: String(g.descricao ?? 'Gasto'),
+            meta: money(Number(g.valorPrevisto || 0)),
+          })),
+      },
+      confirmados: {
+        label: 'Pessoas confirmadas (RSVP Sim)',
+        items: pessoas((p) => p.rsvp === 'sim'),
+      },
+      total: {
+        label: 'Todas as pessoas',
+        items: pessoas(() => true),
+      },
+      adultos: {
+        label: 'Adultos',
+        items: pessoas((p) => p.idade === 'adulto'),
+      },
+      criancas: {
+        label: 'Crianças',
+        items: pessoas((p) => p.idade === 'crianca'),
+      },
+      confAdultos: {
+        label: 'Confirmados · adultos',
+        items: pessoas((p) => p.rsvp === 'sim' && p.idade === 'adulto'),
+      },
+      confCriancas: {
+        label: 'Confirmados · crianças',
+        items: pessoas((p) => p.rsvp === 'sim' && p.idade === 'crianca'),
+      },
+      rsvpNao: {
+        label: 'RSVP · Não',
+        items: pessoas((p) => p.rsvp === 'nao'),
+      },
+      rsvpTalvez: {
+        label: 'RSVP · Talvez',
+        items: pessoas((p) => p.rsvp === 'talvez'),
+      },
+      rsvpPend: {
+        label: 'RSVP · Pendente',
+        items: pessoas((p) => p.rsvp === 'pendente'),
+      },
+      tarefas: {
+        label: 'Tarefas pendentes',
+        items: (data?.tarefas ?? [])
+          .filter((t) => t.status === 'pendente')
+          .map((t) => ({
+            nome: String(t.titulo ?? 'Tarefa'),
+            meta: t.descricao ? String(t.descricao) : undefined,
+          })),
+      },
+      agendaHoje: {
+        label: 'Compromissos hoje',
+        items: (data?.compromissos ?? [])
+          .filter((c) => {
+            const d = new Date(c.inicio);
+            if (Number.isNaN(d.getTime())) return false;
+            d.setHours(0, 0, 0, 0);
+            return d.getTime() === hoje.getTime();
+          })
+          .map((c) => ({
+            nome: String(c.titulo ?? 'Compromisso'),
+            meta: c.local ? String(c.local) : undefined,
+          })),
+      },
+      presentes: {
+        label: 'Presentes reservados',
+        items: (data?.presentes ?? [])
+          .filter((p) => p.reservadoPorConvidadoId)
+          .map((p) => {
+            const quem = (data?.convidados ?? []).find(
+              (c) => c.id === p.reservadoPorConvidadoId,
+            );
+            return {
+              nome: String(p.nome ?? 'Presente'),
+              meta: quem?.nome ? `Reservado por ${quem.nome}` : 'Reservado',
+            };
+          }),
+      },
+    };
+  }, [data, pessoasLinhas]);
+
+  const openResumoDetail = (filterKey: string) => {
+    const f = resumoFiltros[filterKey];
+    if (!f) return;
+    setResumoDetail({ title: f.label, filterKey });
+  };
 
   const padrinhoConvidadoIds = useMemo(
     () => new Set((data?.padrinhos ?? []).map((p) => p.convidadoId)),
@@ -621,9 +801,40 @@ export default function HomePage() {
   }
 
   function resetPresente() {
+    if (presenteImagemPreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(presenteImagemPreview);
+    }
     setPresenteId(null);
     setPresenteNome('');
     setPresenteValor('');
+    setPresenteImagemUrl(null);
+    setPresenteImagemFile(null);
+    setPresenteImagemPreview(null);
+  }
+
+  function onPresenteImagem(list?: FileList | null) {
+    if (presenteImagemPreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(presenteImagemPreview);
+    }
+    const file = Array.from(list ?? []).find((f) =>
+      f.type.startsWith('image/'),
+    );
+    if (!file) {
+      setPresenteImagemFile(null);
+      setPresenteImagemPreview(presenteImagemUrl);
+      return;
+    }
+    setPresenteImagemFile(file);
+    setPresenteImagemPreview(URL.createObjectURL(file));
+  }
+
+  function limparPresenteImagem() {
+    if (presenteImagemPreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(presenteImagemPreview);
+    }
+    setPresenteImagemFile(null);
+    setPresenteImagemUrl(null);
+    setPresenteImagemPreview(null);
   }
 
   async function onRsvp(status: string, acompanhanteId?: string) {
@@ -713,15 +924,20 @@ export default function HomePage() {
 
   async function onSavePresente(e: FormEvent) {
     e.preventDefault();
-    await run(
-      () =>
-        upsertPresente(token!, {
-          ...(presenteId ? { id: presenteId } : {}),
-          nome: presenteNome,
-          valorEstimado: presenteValor ? Number(presenteValor) : undefined,
-        }),
-      presenteId ? 'Presente atualizado' : 'Presente cadastrado',
-    );
+    await run(async () => {
+      let imagemUrl = presenteImagemUrl;
+      if (presenteImagemFile) {
+        const compactada = await compactarFoto(presenteImagemFile, 1200, 0.85);
+        const uploaded = await uploadPresenteImagem(token!, compactada);
+        imagemUrl = uploaded.url;
+      }
+      await upsertPresente(token!, {
+        ...(presenteId ? { id: presenteId } : {}),
+        nome: presenteNome,
+        valorEstimado: presenteValor ? Number(presenteValor) : undefined,
+        imagemUrl,
+      });
+    }, presenteId ? 'Presente atualizado' : 'Presente cadastrado');
     resetPresente();
   }
 
@@ -829,6 +1045,61 @@ export default function HomePage() {
       await copyConvite(res?.token);
     } catch (e) {
       setMsg(e instanceof Error ? e.message : 'Erro');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function ensureConvidadoToken(
+    id: string,
+    codigo?: string | null,
+  ): Promise<string | null> {
+    if (codigo) return codigo;
+    if (!token) return null;
+    const res = (await regenerarTokenConvidado(token, id)) as {
+      token?: string;
+    };
+    await refresh(true);
+    return res?.token ?? null;
+  }
+
+  async function onEnviarWhatsAppConvidado(
+    id: string,
+    opts: {
+      token?: string | null;
+      nome: string;
+      telefone?: string | null;
+    },
+  ) {
+    if (!token) return;
+    setBusy(true);
+    try {
+      const codigo = await ensureConvidadoToken(id, opts.token);
+      const link = conviteLink(codigo);
+      if (!link) {
+        setMsg('Não foi possível gerar o link deste convidado.');
+        return;
+      }
+      const caption = buildConviteWhatsAppCaption({ link });
+      const mode = await shareConviteSlideshow({
+        caption,
+        telefone: opts.telefone,
+      });
+      if (mode === 'shared') {
+        setMsg(
+          'Escolha o WhatsApp — convite, vídeo e link de confirmação vão juntos.',
+        );
+      } else {
+        setMsg(
+          'WhatsApp aberto com o link. Anexe a imagem e o vídeo do convite que foram baixados.',
+        );
+      }
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') {
+        setMsg('Compartilhamento cancelado.');
+      } else {
+        setMsg(e instanceof Error ? e.message : 'Erro ao enviar convite');
+      }
     } finally {
       setBusy(false);
     }
@@ -1057,11 +1328,17 @@ export default function HomePage() {
   }
 
   function editPresente(p: any) {
+    if (presenteImagemPreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(presenteImagemPreview);
+    }
     setPresenteId(p.id);
     setPresenteNome(p.nome ?? '');
     setPresenteValor(
       p.valorEstimado != null ? String(p.valorEstimado) : '',
     );
+    setPresenteImagemUrl(p.imagemUrl ?? null);
+    setPresenteImagemFile(null);
+    setPresenteImagemPreview(p.imagemUrl ?? null);
   }
 
   const cfg = data?.config ?? {};
@@ -1312,66 +1589,138 @@ export default function HomePage() {
           {gestao && (
             <>
               <div className="grid">
-                <div className="stat">
+                <button
+                  type="button"
+                  className="stat stat-click"
+                  onClick={() => openResumoDetail('previsto')}
+                >
                   Previsto
                   <strong>{money(totals.previsto)}</strong>
-                </div>
-                <div className="stat">
+                </button>
+                <button
+                  type="button"
+                  className="stat stat-click"
+                  onClick={() => openResumoDetail('pago')}
+                >
                   Pago
                   <strong>{money(totals.pago)}</strong>
-                </div>
-                <div className="stat">
+                </button>
+                <button
+                  type="button"
+                  className="stat stat-click"
+                  onClick={() => openResumoDetail('restante')}
+                >
                   Restante
                   <strong>{money(totals.restante)}</strong>
-                </div>
-                <div className="stat">
+                </button>
+                <button
+                  type="button"
+                  className="stat stat-click"
+                  onClick={() => openResumoDetail('confirmados')}
+                >
                   Confirmados
                   <strong>{pessoas.confTotal}</strong>
-                </div>
+                </button>
               </div>
               <div className="panel">
                 <h2 style={{ marginTop: 0 }}>Pessoas</h2>
                 <div className="summary-list">
-                  <div className="summary-tile">
+                  <button
+                    type="button"
+                    className="summary-tile summary-tile-click"
+                    onClick={() => openResumoDetail('confirmados')}
+                  >
                     <span>Pessoas confirmadas</span>
                     <strong>{pessoas.rsvpSim}</strong>
-                  </div>
-                  <div className="summary-tile">
+                  </button>
+                  <button
+                    type="button"
+                    className="summary-tile summary-tile-click"
+                    onClick={() => openResumoDetail('total')}
+                  >
                     <span>Total de pessoas</span>
                     <strong>{pessoas.total}</strong>
-                  </div>
-                  <div className="summary-tile">
+                  </button>
+                  <button
+                    type="button"
+                    className="summary-tile summary-tile-click"
+                    onClick={() => openResumoDetail('adultos')}
+                  >
                     <span>Adultos</span>
                     <strong>{pessoas.adultos}</strong>
-                  </div>
-                  <div className="summary-tile">
+                  </button>
+                  <button
+                    type="button"
+                    className="summary-tile summary-tile-click"
+                    onClick={() => openResumoDetail('criancas')}
+                  >
                     <span>Crianças</span>
                     <strong>{pessoas.criancas}</strong>
-                  </div>
-                  <div className="summary-tile">
-                    <span>Confirmados (adultos / crianças)</span>
-                    <strong>
-                      {pessoas.confAdultos} / {pessoas.confCriancas}
-                    </strong>
-                  </div>
-                  <div className="summary-tile">
-                    <span>RSVP · Não / Talvez / Pendente</span>
-                    <strong>
-                      {pessoas.rsvpNao} / {pessoas.rsvpTalvez} / {pessoas.rsvpPend}
-                    </strong>
-                  </div>
-                  <div className="summary-tile">
+                  </button>
+                  <button
+                    type="button"
+                    className="summary-tile summary-tile-click"
+                    onClick={() => openResumoDetail('confAdultos')}
+                  >
+                    <span>Confirmados · adultos</span>
+                    <strong>{pessoas.confAdultos}</strong>
+                  </button>
+                  <button
+                    type="button"
+                    className="summary-tile summary-tile-click"
+                    onClick={() => openResumoDetail('confCriancas')}
+                  >
+                    <span>Confirmados · crianças</span>
+                    <strong>{pessoas.confCriancas}</strong>
+                  </button>
+                  <button
+                    type="button"
+                    className="summary-tile summary-tile-click"
+                    onClick={() => openResumoDetail('rsvpNao')}
+                  >
+                    <span>RSVP · Não</span>
+                    <strong>{pessoas.rsvpNao}</strong>
+                  </button>
+                  <button
+                    type="button"
+                    className="summary-tile summary-tile-click"
+                    onClick={() => openResumoDetail('rsvpTalvez')}
+                  >
+                    <span>RSVP · Talvez</span>
+                    <strong>{pessoas.rsvpTalvez}</strong>
+                  </button>
+                  <button
+                    type="button"
+                    className="summary-tile summary-tile-click"
+                    onClick={() => openResumoDetail('rsvpPend')}
+                  >
+                    <span>RSVP · Pendente</span>
+                    <strong>{pessoas.rsvpPend}</strong>
+                  </button>
+                  <button
+                    type="button"
+                    className="summary-tile summary-tile-click"
+                    onClick={() => openResumoDetail('tarefas')}
+                  >
                     <span>Tarefas pendentes</span>
                     <strong>{pessoas.pendentes}</strong>
-                  </div>
-                  <div className="summary-tile">
+                  </button>
+                  <button
+                    type="button"
+                    className="summary-tile summary-tile-click"
+                    onClick={() => openResumoDetail('agendaHoje')}
+                  >
                     <span>Compromissos hoje</span>
                     <strong>{pessoas.agendaHoje}</strong>
-                  </div>
-                  <div className="summary-tile">
+                  </button>
+                  <button
+                    type="button"
+                    className="summary-tile summary-tile-click"
+                    onClick={() => openResumoDetail('presentes')}
+                  >
                     <span>Presentes reservados</span>
                     <strong>{pessoas.reservados}</strong>
-                  </div>
+                  </button>
                 </div>
               </div>
               <div className="panel">
@@ -1399,6 +1748,62 @@ export default function HomePage() {
                   </div>
                 )}
               </div>
+              {resumoDetail && (
+                <div
+                  className="resumo-modal"
+                  role="dialog"
+                  aria-modal="true"
+                  onClick={() => setResumoDetail(null)}
+                >
+                  <div
+                    className="resumo-modal__panel"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="resumo-modal__head">
+                      <h2>{resumoDetail.title}</h2>
+                      <button
+                        type="button"
+                        className="ghost"
+                        onClick={() => setResumoDetail(null)}
+                      >
+                        Fechar
+                      </button>
+                    </div>
+                    <label htmlFor="resumo-filtro">Filtrar</label>
+                    <select
+                      id="resumo-filtro"
+                      value={resumoDetail.filterKey}
+                      onChange={(e) => {
+                        const key = e.target.value;
+                        const f = resumoFiltros[key];
+                        if (f) setResumoDetail({ title: f.label, filterKey: key });
+                      }}
+                    >
+                      {Object.entries(resumoFiltros).map(([key, f]) => (
+                        <option key={key} value={key}>
+                          {f.label} ({f.items.length})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="hint" style={{ textAlign: 'left' }}>
+                      {(resumoFiltros[resumoDetail.filterKey]?.items.length ??
+                        0) === 0
+                        ? 'Nenhum item nesta seleção.'
+                        : `${resumoFiltros[resumoDetail.filterKey].items.length} item(ns)`}
+                    </p>
+                    <div className="resumo-nome-grid">
+                      {(resumoFiltros[resumoDetail.filterKey]?.items ?? []).map(
+                        (item, i) => (
+                          <div key={`${item.nome}-${i}`} className="resumo-nome-card">
+                            <strong>{item.nome}</strong>
+                            {item.meta ? <span>{item.meta}</span> : null}
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -1817,6 +2222,22 @@ export default function HomePage() {
                         Copiar link
                       </button>
                     )}
+                    {convId && (
+                      <button
+                        type="button"
+                        className="ghost"
+                        disabled={busy}
+                        onClick={() =>
+                          onEnviarWhatsAppConvidado(convId, {
+                            token: convToken,
+                            nome: convNome,
+                            telefone: convTelefone,
+                          })
+                        }
+                      >
+                        Enviar convite WhatsApp
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="ghost"
@@ -1885,6 +2306,19 @@ export default function HomePage() {
                     onClick={() => onCopiarLinkConvidado(c.id, c.token)}
                   >
                     Copiar link
+                  </button>
+                  <button
+                    className="ghost"
+                    disabled={busy}
+                    onClick={() =>
+                      onEnviarWhatsAppConvidado(c.id, {
+                        token: c.token,
+                        nome: c.nome,
+                        telefone: c.telefone,
+                      })
+                    }
+                  >
+                    Enviar convite WhatsApp
                   </button>
                   <button
                     className="ghost"
@@ -2014,6 +2448,28 @@ export default function HomePage() {
                 value={presenteValor}
                 onChange={(e) => setPresenteValor(e.target.value)}
               />
+              <label>Foto ilustrativa</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => onPresenteImagem(e.target.files)}
+              />
+              {presenteImagemPreview && (
+                <div className="presente-form-preview">
+                  <img
+                    src={presenteImagemPreview}
+                    alt="Prévia do presente"
+                  />
+                  <button
+                    type="button"
+                    className="ghost"
+                    disabled={busy}
+                    onClick={limparPresenteImagem}
+                  >
+                    Remover foto
+                  </button>
+                </div>
+              )}
               <div className="row">
                 <button className="primary" disabled={busy}>
                   {presenteId ? 'Salvar alterações' : 'Cadastrar presente'}
@@ -2031,52 +2487,78 @@ export default function HomePage() {
               </div>
             </form>
           )}
-          {(data?.presentes ?? []).map((p) => (
-            <div key={p.id} className="item">
-              <h3>{p.nome}</h3>
-              <p>
-                {p.valorEstimado != null
-                  ? money(Number(p.valorEstimado))
-                  : 'Sem valor'}{' '}
-                · {p.reservadoPorConvidadoId ? 'Reservado' : 'Disponível'}
-              </p>
-              {gestao && (
-                <div className="row">
-                  <button
-                    className="ghost"
-                    disabled={busy}
-                    onClick={() => editPresente(p)}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    className="ghost"
-                    style={{ color: '#b84a4a' }}
-                    disabled={busy}
-                    onClick={() =>
-                      run(
-                        () => deletePresente(token!, p.id),
-                        'Presente excluído',
-                      )
-                    }
-                  >
-                    Excluir
-                  </button>
+          {(data?.presentes ?? []).map((p) => {
+            const reservadoPor = p.reservadoPorConvidadoId
+              ? convidadoById.get(p.reservadoPorConvidadoId)
+              : null;
+            let statusLabel = 'Disponível';
+            if (p.reservadoPorConvidadoId) {
+              if (gestao) {
+                statusLabel = reservadoPor?.nome
+                  ? `Reservado por ${reservadoPor.nome}`
+                  : 'Reservado';
+              } else if (p.reservadoPorConvidadoId === user?.convidadoId) {
+                statusLabel = 'Você reservou';
+              } else {
+                statusLabel = 'Reservado';
+              }
+            }
+            return (
+              <div key={p.id} className="item presente-item">
+                {p.imagemUrl ? (
+                  <img
+                    className="presente-thumb"
+                    src={p.imagemUrl}
+                    alt={p.nome}
+                  />
+                ) : null}
+                <div className="presente-item__body">
+                  <h3>{p.nome}</h3>
+                  <p>
+                    {p.valorEstimado != null
+                      ? money(Number(p.valorEstimado))
+                      : 'Sem valor'}{' '}
+                    · {statusLabel}
+                  </p>
+                  {gestao && (
+                    <div className="row">
+                      <button
+                        className="ghost"
+                        disabled={busy}
+                        onClick={() => editPresente(p)}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        className="ghost"
+                        style={{ color: '#b84a4a' }}
+                        disabled={busy}
+                        onClick={() =>
+                          run(
+                            () => deletePresente(token!, p.id),
+                            'Presente excluído',
+                          )
+                        }
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  )}
+                  {!gestao && !p.reservadoPorConvidadoId && (
+                    <div className="row">
+                      <button
+                        className="ghost"
+                        disabled={busy}
+                        onClick={() => onReservar(p.id)}
+                      >
+                        Reservar
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
-              {!gestao && !p.reservadoPorConvidadoId && (
-                <div className="row">
-                  <button
-                    className="ghost"
-                    disabled={busy}
-                    onClick={() => onReservar(p.id)}
-                  >
-                    Reservar
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       )}
 

@@ -7,12 +7,13 @@ import {
   Post,
   Put,
   Req,
+  UploadedFile,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { DataService } from './data.service';
 import { fotoUploadOptions, AdicionarFotosDto } from './foto-upload';
@@ -152,6 +153,16 @@ export class DataController {
   @Post('presentes')
   upsertPresente(@Req() req: { user: { userId: string } }, @Body() body: any) {
     return this.data.upsertPresente(req.user.userId, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('presentes/imagem')
+  @UseInterceptors(FileInterceptor('file', fotoUploadOptions))
+  uploadPresenteImagem(
+    @Req() req: { user: { userId: string } },
+    @UploadedFile() file: { filename: string } | undefined,
+  ) {
+    return this.data.uploadPresenteImagem(req.user.userId, file);
   }
 
   @UseGuards(JwtAuthGuard)

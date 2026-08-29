@@ -1,7 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/constants.dart';
 import '../../core/formatters.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/brand_widgets.dart';
@@ -77,6 +81,7 @@ class PresentesScreen extends StatelessWidget {
 
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
+                      leading: _PresenteThumb(url: p.imagemUrl),
                       title: Text(p.nome),
                       subtitle: Text(
                         [
@@ -147,6 +152,9 @@ class PresentesScreen extends StatelessWidget {
       text: existing?.valorEstimado?.toString() ?? '',
     );
     var ativo = existing?.ativo ?? true;
+    String? imagemUrl = existing?.imagemUrl;
+    Uint8List? imagemBytes;
+    String? imagemNome;
 
     final ok = await showDialog<bool>(
       context: context,
@@ -177,6 +185,77 @@ class PresentesScreen extends StatelessWidget {
                   keyboardType: TextInputType.number,
                   decoration:
                       const InputDecoration(labelText: 'Valor estimado'),
+                ),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Foto ilustrativa',
+                    style: Theme.of(ctx).textTheme.labelLarge,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (imagemBytes != null)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.memory(
+                      imagemBytes!,
+                      height: 120,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                else if (imagemUrl != null && imagemUrl!.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      AppConstants.mediaUrl(imagemUrl!),
+                      height: 120,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => Container(
+                        height: 120,
+                        color: AppColors.surfaceElevated,
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.broken_image),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: () async {
+                        final picked = await ImagePicker().pickImage(
+                          source: ImageSource.gallery,
+                          imageQuality: 85,
+                          maxWidth: 1200,
+                        );
+                        if (picked == null) return;
+                        final bytes = await picked.readAsBytes();
+                        setLocal(() {
+                          imagemBytes = bytes;
+                          imagemNome = picked.name;
+                        });
+                      },
+                      icon: const Icon(Icons.photo_outlined),
+                      label: Text(
+                        imagemBytes != null || (imagemUrl?.isNotEmpty ?? false)
+                            ? 'Trocar foto'
+                            : 'Escolher foto',
+                      ),
+                    ),
+                    if (imagemBytes != null ||
+                        (imagemUrl != null && imagemUrl!.isNotEmpty))
+                      TextButton(
+                        onPressed: () => setLocal(() {
+                          imagemBytes = null;
+                          imagemNome = null;
+                          imagemUrl = null;
+                        }),
+                        child: const Text('Remover'),
+                      ),
+                  ],
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
@@ -221,6 +300,23 @@ class PresentesScreen extends StatelessWidget {
     );
 
     if (ok != true) return;
+
+    var finalImagemUrl = imagemUrl;
+    if (imagemBytes != null) {
+      try {
+        finalImagemUrl = await store.uploadPresenteImagem(
+          imagemBytes!,
+          imagemNome ?? 'presente.jpg',
+        );
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(e.toString())));
+        }
+        return;
+      }
+    }
+
     final p = Presente(
       id: existing?.id ?? store.novoId(),
       nome: nome.text.trim(),
@@ -230,11 +326,48 @@ class PresentesScreen extends StatelessWidget {
       ativo: ativo,
       reservadoPorConvidadoId: existing?.reservadoPorConvidadoId,
       reservadoEm: existing?.reservadoEm,
-      imagemUrl: existing?.imagemUrl,
+      imagemUrl: finalImagemUrl,
     );
     final err = await store.upsertPresente(p);
     if (context.mounted && err != null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
     }
+  }
+}
+
+class _PresenteThumb extends StatelessWidget {
+  const _PresenteThumb({this.url});
+
+  final String? url;
+
+  @override
+  Widget build(BuildContext context) {
+    final src = url;
+    if (src == null || src.isEmpty) {
+      return Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: AppColors.surfaceElevated,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(Icons.card_giftcard_outlined, color: AppColors.muted),
+      );
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Image.network(
+        AppConstants.mediaUrl(src),
+        width: 56,
+        height: 56,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => Container(
+          width: 56,
+          height: 56,
+          color: AppColors.surfaceElevated,
+          child: const Icon(Icons.broken_image, color: AppColors.muted),
+        ),
+      ),
+    );
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -18,18 +19,43 @@ class WelcomeSlideshowScreen extends StatefulWidget {
 
 class _WelcomeSlideshowScreenState extends State<WelcomeSlideshowScreen> {
   final _controller = PageController();
+  final _player = AudioPlayer();
   int _index = 0;
+  bool _musicOn = true;
   Timer? _auto;
 
   @override
   void initState() {
     super.initState();
     _restartAuto();
+    _startMusic();
+  }
+
+  Future<void> _startMusic() async {
+    try {
+      await _player.setReleaseMode(ReleaseMode.loop);
+      await _player.setVolume(0.55);
+      await _player.play(AssetSource('welcome/bg-music.mp3'));
+      if (mounted) setState(() => _musicOn = true);
+    } catch (_) {
+      if (mounted) setState(() => _musicOn = false);
+    }
+  }
+
+  Future<void> _toggleMusic() async {
+    if (_musicOn) {
+      await _player.pause();
+      if (mounted) setState(() => _musicOn = false);
+    } else {
+      await _player.resume();
+      if (mounted) setState(() => _musicOn = true);
+    }
   }
 
   @override
   void dispose() {
     _auto?.cancel();
+    _player.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -51,6 +77,7 @@ class _WelcomeSlideshowScreenState extends State<WelcomeSlideshowScreen> {
 
   void _finish() {
     _auto?.cancel();
+    unawaited(_player.stop());
     if (!mounted) return;
     final store = context.read<AppStore>();
     context.go(store.homeRouteForRole());
@@ -135,12 +162,36 @@ class _WelcomeSlideshowScreenState extends State<WelcomeSlideshowScreen> {
                           height: 1.5,
                           color: AppColors.primary.withValues(alpha: 0.85),
                         ),
+                        const SizedBox(height: 14),
+                        Text(
+                          weddingDateLabel,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.cormorantGaramond(
+                            color: AppColors.primary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 1.4,
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ],
               );
             },
+          ),
+          Positioned(
+            top: topPad + 8,
+            left: 12,
+            child: IconButton(
+              onPressed: _toggleMusic,
+              tooltip: _musicOn ? 'Pausar música' : 'Tocar música',
+              style: IconButton.styleFrom(
+                foregroundColor: Colors.white.withValues(alpha: 0.92),
+                backgroundColor: Colors.black.withValues(alpha: 0.28),
+              ),
+              icon: Icon(_musicOn ? Icons.music_note : Icons.music_off),
+            ),
           ),
           Positioned(
             top: topPad + 8,

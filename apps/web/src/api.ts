@@ -210,6 +210,21 @@ export async function upsertPresente(
   return api(token, 'POST', '/presentes', body);
 }
 
+export async function uploadPresenteImagem(token: string, file: Blob) {
+  const fd = new FormData();
+  const name =
+    file instanceof File && file.name ? file.name : 'presente.jpg';
+  fd.append('file', file, name);
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(`${API_BASE}/presentes/imagem`, {
+    method: 'POST',
+    headers,
+    body: fd,
+  });
+  return parse(res) as Promise<{ url: string }>;
+}
+
 export async function deletePresente(token: string, id: string) {
   return api(token, 'DELETE', `/presentes/${id}`);
 }

@@ -3,6 +3,10 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { BrandLogo } from '../components/Brand';
 
+/**
+ * Entra com o código do convite e deixa a Home exibir o slideshow
+ * (flag welcome_pending setada em loginWithToken).
+ */
 export default function ConvitePage() {
   const { codigo } = useParams();
   const { loginWithToken } = useAuth();
