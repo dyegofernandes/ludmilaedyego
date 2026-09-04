@@ -12,16 +12,32 @@ import '../../core/widgets/brand_widgets.dart';
 import '../../data/app_store.dart';
 import '../../models/models.dart';
 
-class PresentesScreen extends StatelessWidget {
+class PresentesScreen extends StatefulWidget {
   const PresentesScreen({super.key, this.guestMode = false});
 
   final bool guestMode;
 
   @override
+  State<PresentesScreen> createState() => _PresentesScreenState();
+}
+
+class _PresentesScreenState extends State<PresentesScreen> {
+  AudienciaPresente? _filtroGestao;
+
+  @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
-    final list = store.presentes.where((p) => guestMode ? p.ativo : true).toList();
+    final guestMode = widget.guestMode;
+    var list = store.presentes.where((p) => guestMode ? p.ativo : true).toList();
+    if (!guestMode && _filtroGestao != null) {
+      list = list.where((p) => p.audiencia == _filtroGestao).toList();
+    }
     final meuId = store.meuConvidado?.id;
+    final titulo = guestMode
+        ? (store.isPadrinho
+            ? 'Presentes dos padrinhos'
+            : 'Lista de presentes')
+        : 'Presentes';
 
     return Scaffold(
       body: SoftBackground(
@@ -38,7 +54,7 @@ class PresentesScreen extends StatelessWidget {
                     ),
                     Expanded(
                       child: Text(
-                        'Presentes',
+                        titulo,
                         style: Theme.of(context).textTheme.headlineMedium,
                       ),
                     ),
@@ -50,6 +66,26 @@ class PresentesScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              if (!guestMode)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                  child: SegmentedButton<AudienciaPresente?>(
+                    segments: const [
+                      ButtonSegment(value: null, label: Text('Todos')),
+                      ButtonSegment(
+                        value: AudienciaPresente.convidados,
+                        label: Text('Convidados'),
+                      ),
+                      ButtonSegment(
+                        value: AudienciaPresente.padrinhos,
+                        label: Text('Padrinhos'),
+                      ),
+                    ],
+                    selected: {_filtroGestao},
+                    onSelectionChanged: (s) =>
+                        setState(() => _filtroGestao = s.first),
+                  ),
+                ),
               Expanded(
                 child: ListView.separated(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
@@ -85,6 +121,7 @@ class PresentesScreen extends StatelessWidget {
                       title: Text(p.nome),
                       subtitle: Text(
                         [
+                          if (!guestMode) p.audiencia.label,
                           if (p.valorEstimado != null)
                             formatMoney(p.valorEstimado!),
                           statusLabel,
@@ -152,6 +189,7 @@ class PresentesScreen extends StatelessWidget {
       text: existing?.valorEstimado?.toString() ?? '',
     );
     var ativo = existing?.ativo ?? true;
+    var audiencia = existing?.audiencia ?? AudienciaPresente.convidados;
     String? imagemUrl = existing?.imagemUrl;
     Uint8List? imagemBytes;
     String? imagemNome;
@@ -185,6 +223,20 @@ class PresentesScreen extends StatelessWidget {
                   keyboardType: TextInputType.number,
                   decoration:
                       const InputDecoration(labelText: 'Valor estimado'),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<AudienciaPresente>(
+                  initialValue: audiencia,
+                  decoration: const InputDecoration(labelText: 'Para'),
+                  items: AudienciaPresente.values
+                      .map(
+                        (a) => DropdownMenuItem(
+                          value: a,
+                          child: Text(a.label),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) => setLocal(() => audiencia = v!),
                 ),
                 const SizedBox(height: 10),
                 Align(
@@ -324,6 +376,7 @@ class PresentesScreen extends StatelessWidget {
       link: link.text.trim().isEmpty ? null : link.text.trim(),
       valorEstimado: double.tryParse(valor.text.replaceAll(',', '.')),
       ativo: ativo,
+      audiencia: audiencia,
       reservadoPorConvidadoId: existing?.reservadoPorConvidadoId,
       reservadoEm: existing?.reservadoEm,
       imagemUrl: finalImagemUrl,

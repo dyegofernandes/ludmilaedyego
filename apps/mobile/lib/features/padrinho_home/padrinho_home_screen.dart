@@ -83,7 +83,7 @@ class PadrinhoHomeScreen extends StatelessWidget {
               ),
               GlassMenuTile(
                 icon: Icons.card_giftcard_outlined,
-                label: 'Lista de presentes',
+                label: 'Lista de compras dos padrinhos',
                 onTap: () => context.push('/presentes-guest'),
               ),
               GlassMenuTile(

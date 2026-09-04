@@ -203,7 +203,10 @@ List<_ResumoFiltro> _buildResumoFiltros(AppStore store) {
             final quem = store.convidadoById(p.reservadoPorConvidadoId);
             return _NomeItem(
               p.nome,
-              quem != null ? 'Reservado por ${quem.nome}' : 'Reservado',
+              [
+                p.audiencia.label,
+                quem != null ? 'Reservado por ${quem.nome}' : 'Reservado',
+              ].join(' · '),
             );
           })
           .toList(),

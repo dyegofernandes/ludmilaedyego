@@ -598,6 +598,7 @@ class Presente {
     this.valorEstimado,
     this.imagemUrl,
     this.ativo = true,
+    this.audiencia = AudienciaPresente.convidados,
     this.reservadoPorConvidadoId,
     this.reservadoEm,
   });
@@ -609,8 +610,20 @@ class Presente {
   double? valorEstimado;
   String? imagemUrl;
   bool ativo;
+  AudienciaPresente audiencia;
   String? reservadoPorConvidadoId;
   DateTime? reservadoEm;
 
   bool get reservado => reservadoPorConvidadoId != null;
+}
+
+enum AudienciaPresente { convidados, padrinhos }
+
+AudienciaPresente audienciaPresenteFromDb(String? v) =>
+    v == 'padrinhos' ? AudienciaPresente.padrinhos : AudienciaPresente.convidados;
+
+extension AudienciaPresenteX on AudienciaPresente {
+  String get dbValue => name;
+  String get label =>
+      this == AudienciaPresente.padrinhos ? 'Padrinhos' : 'Convidados';
 }

@@ -69,6 +69,11 @@ enum TipoDespedida {
   solteira
 }
 
+enum AudienciaPresente {
+  convidados
+  padrinhos
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String?  @unique
@@ -214,16 +219,17 @@ model Foto {
 }
 
 model Presente {
-  id                     String    @id @default(uuid())
+  id                     String            @id @default(uuid())
   nome                   String
   descricao              String?
   link                   String?
-  valorEstimado          Decimal?  @db.Decimal(12, 2)
+  valorEstimado          Decimal?          @db.Decimal(12, 2)
   imagemUrl              String?
-  ativo                  Boolean   @default(true)
+  ativo                  Boolean           @default(true)
+  audiencia              AudienciaPresente @default(convidados)
   reservadoPorConvidadoId String?
   reservadoEm            DateTime?
-  createdAt              DateTime  @default(now())
+  createdAt              DateTime          @default(now())
 
   reservadoPor Convidado? @relation(fields: [reservadoPorConvidadoId], references: [id], onDelete: SetNull)
 }

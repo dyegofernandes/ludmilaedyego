@@ -361,6 +361,12 @@ export default function HomePage() {
   const [presenteId, setPresenteId] = useState<string | null>(null);
   const [presenteNome, setPresenteNome] = useState('');
   const [presenteValor, setPresenteValor] = useState('');
+  const [presenteAudiencia, setPresenteAudiencia] = useState<
+    'convidados' | 'padrinhos'
+  >('convidados');
+  const [presenteFiltro, setPresenteFiltro] = useState<
+    'todos' | 'convidados' | 'padrinhos'
+  >('todos');
   const [presenteImagemUrl, setPresenteImagemUrl] = useState<string | null>(
     null,
   );
@@ -688,7 +694,10 @@ export default function HomePage() {
             );
             return {
               nome: String(p.nome ?? 'Presente'),
-              meta: quem?.nome ? `Reservado por ${quem.nome}` : 'Reservado',
+              meta: [
+                p.audiencia === 'padrinhos' ? 'Padrinhos' : 'Convidados',
+                quem?.nome ? `Reservado por ${quem.nome}` : 'Reservado',
+              ].join(' · '),
             };
           }),
       },
@@ -817,7 +826,7 @@ export default function HomePage() {
     { id: 'agenda', label: 'Agenda', show: gestao },
     { id: 'convidados', label: 'Convidados', show: gestao },
     { id: 'padrinhos', label: 'Padrinhos', show: gestao },
-    { id: 'presentes', label: 'Presentes', show: true },
+    { id: 'presentes', label: role === 'padrinho' ? 'Presentes dos padrinhos' : 'Presentes', show: true },
     { id: 'tokens', label: 'Cerimonialista', show: gestao },
     { id: 'evento', label: 'Evento', show: true },
     { id: 'fotos', label: 'Fotos', show: true },
@@ -882,6 +891,7 @@ export default function HomePage() {
     setPresenteId(null);
     setPresenteNome('');
     setPresenteValor('');
+    setPresenteAudiencia('convidados');
     setPresenteImagemUrl(null);
     setPresenteImagemFile(null);
     setPresenteImagemPreview(null);
@@ -1010,6 +1020,7 @@ export default function HomePage() {
         ...(presenteId ? { id: presenteId } : {}),
         nome: presenteNome,
         valorEstimado: presenteValor ? Number(presenteValor) : undefined,
+        audiencia: presenteAudiencia,
         imagemUrl,
       });
     }, presenteId ? 'Presente atualizado' : 'Presente cadastrado');
@@ -1407,6 +1418,9 @@ export default function HomePage() {
     setPresenteNome(p.nome ?? '');
     setPresenteValor(
       p.valorEstimado != null ? String(p.valorEstimado) : '',
+    );
+    setPresenteAudiencia(
+      p.audiencia === 'padrinhos' ? 'padrinhos' : 'convidados',
     );
     setPresenteImagemUrl(p.imagemUrl ?? null);
     setPresenteImagemFile(null);
@@ -2558,6 +2572,18 @@ export default function HomePage() {
                 value={presenteValor}
                 onChange={(e) => setPresenteValor(e.target.value)}
               />
+              <label>Para</label>
+              <select
+                value={presenteAudiencia}
+                onChange={(e) =>
+                  setPresenteAudiencia(
+                    e.target.value as 'convidados' | 'padrinhos',
+                  )
+                }
+              >
+                <option value="convidados">Convidados</option>
+                <option value="padrinhos">Padrinhos</option>
+              </select>
               <label>Foto ilustrativa</label>
               <input
                 type="file"
@@ -2597,7 +2623,37 @@ export default function HomePage() {
               </div>
             </form>
           )}
-          {(data?.presentes ?? []).map((p) => {
+          {gestao && (
+            <div className="row" style={{ marginBottom: 8 }}>
+              <label style={{ margin: 0 }}>Filtrar</label>
+              <select
+                value={presenteFiltro}
+                onChange={(e) =>
+                  setPresenteFiltro(
+                    e.target.value as 'todos' | 'convidados' | 'padrinhos',
+                  )
+                }
+              >
+                <option value="todos">Todos</option>
+                <option value="convidados">Convidados</option>
+                <option value="padrinhos">Padrinhos</option>
+              </select>
+            </div>
+          )}
+          {!gestao && (
+            <p className="hint" style={{ textAlign: 'left' }}>
+              {role === 'padrinho'
+                ? 'Lista de compras dos padrinhos'
+                : 'Lista de presentes dos convidados'}
+            </p>
+          )}
+          {(data?.presentes ?? [])
+            .filter((p) => {
+              if (!gestao) return true;
+              if (presenteFiltro === 'todos') return true;
+              return (p.audiencia ?? 'convidados') === presenteFiltro;
+            })
+            .map((p) => {
             const reservadoPor = p.reservadoPorConvidadoId
               ? convidadoById.get(p.reservadoPorConvidadoId)
               : null;
@@ -2613,6 +2669,8 @@ export default function HomePage() {
                 statusLabel = 'Reservado';
               }
             }
+            const audienciaLabel =
+              p.audiencia === 'padrinhos' ? 'Padrinhos' : 'Convidados';
             return (
               <div key={p.id} className="item presente-item">
                 {p.imagemUrl ? (
@@ -2623,7 +2681,15 @@ export default function HomePage() {
                   />
                 ) : null}
                 <div className="presente-item__body">
-                  <h3>{p.nome}</h3>
+                  <h3>
+                    {p.nome}
+                    {gestao ? (
+                      <>
+                        {' '}
+                        <span className="badge">{audienciaLabel}</span>
+                      </>
+                    ) : null}
+                  </h3>
                   <p>
                     {p.valorEstimado != null
                       ? money(Number(p.valorEstimado))

@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  AudienciaPresente,
   DestinoTarefa,
   FotoTipo,
   LadoConvidado,
@@ -136,8 +137,17 @@ export class DataService {
     const padrinhos = await this.prisma.padrinho.findMany({
       orderBy: { ordem: 'asc' },
     });
+    const presentesWhere = gestao
+      ? undefined
+      : {
+          ativo: true,
+          audiencia:
+            user.role === UserRole.padrinho
+              ? AudienciaPresente.padrinhos
+              : AudienciaPresente.convidados,
+        };
     const presentes = await this.prisma.presente.findMany({
-      where: gestao ? undefined : { ativo: true },
+      where: presentesWhere,
       orderBy: { createdAt: 'desc' },
     });
     const fotos = await this.prisma.foto.findMany({
@@ -428,6 +438,12 @@ export class DataService {
     return { ok: true };
   }
 
+  private parseAudienciaPresente(v: unknown): AudienciaPresente {
+    return v === 'padrinhos' || v === AudienciaPresente.padrinhos
+      ? AudienciaPresente.padrinhos
+      : AudienciaPresente.convidados;
+  }
+
   async upsertPresente(userId: string, body: any) {
     await this.assertGestao(userId);
     const data: {
@@ -436,6 +452,7 @@ export class DataService {
       link: string | null;
       valorEstimado: number | null;
       ativo: boolean;
+      audiencia: AudienciaPresente;
       imagemUrl?: string | null;
     } = {
       nome: body.nome,
@@ -443,6 +460,7 @@ export class DataService {
       link: body.link ?? null,
       valorEstimado: body.valorEstimado ?? null,
       ativo: body.ativo ?? true,
+      audiencia: this.parseAudienciaPresente(body.audiencia),
     };
     let oldImagemUrl: string | null = null;
     if ('imagemUrl' in body) {
@@ -477,6 +495,25 @@ export class DataService {
   async reservarPresente(userId: string, presenteId: string) {
     const user = await this.requireUser(userId);
     if (!user.convidadoId) throw new ForbiddenException('Sem convidado vinculado');
+    const existing = await this.prisma.presente.findUnique({
+      where: { id: presenteId },
+    });
+    if (!existing || !existing.ativo) {
+      throw new NotFoundException('Presente não encontrado');
+    }
+    const audienciaEsperada =
+      user.role === UserRole.padrinho
+        ? AudienciaPresente.padrinhos
+        : AudienciaPresente.convidados;
+    if (existing.audiencia !== audienciaEsperada) {
+      throw new ForbiddenException('Este presente não está na sua lista');
+    }
+    if (
+      existing.reservadoPorConvidadoId &&
+      existing.reservadoPorConvidadoId !== user.convidadoId
+    ) {
+      throw new ForbiddenException('Presente já reservado');
+    }
     const p = await this.prisma.presente.update({
       where: { id: presenteId },
       data: {

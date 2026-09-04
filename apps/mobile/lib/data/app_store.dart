@@ -45,6 +45,12 @@ class AppStore extends ChangeNotifier {
   bool get isConvidado => currentUser?.isConvidado ?? false;
   bool get isGestao => isNoivo || isCerimonialista;
 
+  List<Presente> get presentesConvidados =>
+      presentes.where((p) => p.audiencia == AudienciaPresente.convidados).toList();
+
+  List<Presente> get presentesPadrinhos =>
+      presentes.where((p) => p.audiencia == AudienciaPresente.padrinhos).toList();
+
   Convidado? get meuConvidado {
     final cid = currentUser?.convidadoId;
     if (cid != null && cid.isNotEmpty) {
@@ -320,6 +326,7 @@ class AppStore extends ChangeNotifier {
           valorEstimado: (m['valorEstimado'] as num?)?.toDouble(),
           imagemUrl: m['imagemUrl']?.toString(),
           ativo: m['ativo'] != false,
+          audiencia: audienciaPresenteFromDb(m['audiencia']?.toString()),
           reservadoPorConvidadoId: m['reservadoPorConvidadoId']?.toString(),
           reservadoEm: _parseDate(m['reservadoEm']),
         );
@@ -800,6 +807,7 @@ class AppStore extends ChangeNotifier {
         'valorEstimado': p.valorEstimado,
         'imagemUrl': p.imagemUrl,
         'ativo': p.ativo,
+        'audiencia': p.audiencia.dbValue,
       });
       await refreshAll();
       return null;
