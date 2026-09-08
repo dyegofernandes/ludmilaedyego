@@ -1150,7 +1150,8 @@ export default function HomePage() {
   }
 
   function linkConvite(codigo?: string | null) {
-    return conviteLink(codigo, data?.config?.urlPublica || evtUrlPublica);
+    const base = String(data?.config?.urlPublica || evtUrlPublica || '');
+    return conviteLink(codigo, base);
   }
 
   async function copyConvite(codigo?: string | null) {
