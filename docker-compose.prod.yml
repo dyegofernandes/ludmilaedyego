@@ -60,16 +60,13 @@ services:
       context: .
       dockerfile: deploy/Dockerfile.nginx
       args:
-        VITE_PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:-https://ludmilaedyego.ddns.net:8087}
+        VITE_PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:-http://207.180.243.108:8087}
     restart: unless-stopped
     depends_on:
       api:
         condition: service_healthy
     ports:
-      - "8087:443"
-    volumes:
-      - ./certs:/etc/nginx/certs
-      - ./certbot-www:/var/www/certbot:ro
+      - "8087:80"
 
 volumes:
   casamento_pg_data:

@@ -24,6 +24,3 @@ apps/api/uploads/
 # Secrets
 secrets/
 .cursor/
-certs/
-certbot-www/
-letsencrypt/

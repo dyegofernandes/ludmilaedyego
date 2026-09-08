@@ -4,12 +4,12 @@
 class AppConstants {
   static const apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://ludmilaedyego.ddns.net:8087',
+    defaultValue: 'http://207.180.243.108:8087',
   );
 
   static const webBaseUrl = String.fromEnvironment(
     'WEB_BASE_URL',
-    defaultValue: 'https://ludmilaedyego.ddns.net:8087',
+    defaultValue: 'http://207.180.243.108:8087',
   );
 
   static const fallbackNomeNoivo = 'Dyego';

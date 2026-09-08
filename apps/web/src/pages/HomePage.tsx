@@ -3068,11 +3068,11 @@ export default function HomePage() {
                 <input
                   value={evtUrlPublica}
                   onChange={(e) => setEvtUrlPublica(e.target.value)}
-                  placeholder="https://ludmilaedyego.ddns.net:8087"
+                  placeholder="http://ludmilaedyego.ddns.net:8087"
                 />
                 <p className="hint" style={{ textAlign: 'left' }}>
                   Os convites usam este endereço no lugar do IP. Ex.:
-                  https://ludmilaedyego.ddns.net:8087/convite/CODIGO
+                  http://ludmilaedyego.ddns.net:8087/convite/CODIGO
                 </p>
                 <label>WhatsApp</label>
                 <input

@@ -339,7 +339,7 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
                 keyboardType: TextInputType.url,
                 decoration: const InputDecoration(
                   labelText: 'Link público do site (convites)',
-                  hintText: 'https://ludmilaedyego.ddns.net:8087',
+                  hintText: 'http://ludmilaedyego.ddns.net:8087',
                 ),
               ),
               const SizedBox(height: 12),

@@ -5,16 +5,12 @@ WORKDIR /web
 COPY apps/web/package*.json ./
 RUN npm ci
 COPY apps/web/ ./
-ARG VITE_PUBLIC_WEB_URL=https://ludmilaedyego.ddns.net:8087
+ARG VITE_PUBLIC_WEB_URL=http://ludmilaedyego
 ENV VITE_API_BASE=/api
 ENV VITE_PUBLIC_WEB_URL=$VITE_PUBLIC_WEB_URL
 RUN npm run build
 
 FROM nginx:1.27-alpine
-RUN apk add --no-cache openssl
 COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
-COPY deploy/nginx-entrypoint.sh /nginx-entrypoint.sh
-RUN sed -i 's/\r$//' /nginx-entrypoint.sh && chmod +x /nginx-entrypoint.sh
 COPY --from=web-build /web/dist /usr/share/nginx/html
-EXPOSE 80 443
-ENTRYPOINT ["/nginx-entrypoint.sh"]
+EXPOSE 80
