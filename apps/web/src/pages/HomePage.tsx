@@ -20,7 +20,6 @@ import {
   listNoivos,
   putRsvp,
   regenerarTokenConvidado,
-  reservarPresente,
   salvarConfig,
   salvarDespedidaEvento,
   upsertAtracao,
@@ -374,6 +373,12 @@ export default function HomePage() {
     null,
   );
   const [presenteImagemPreview, setPresenteImagemPreview] = useState<
+    string | null
+  >(null);
+  const [presentePixChave, setPresentePixChave] = useState('');
+  const [presentePixQrUrl, setPresentePixQrUrl] = useState<string | null>(null);
+  const [presentePixQrFile, setPresentePixQrFile] = useState<File | null>(null);
+  const [presentePixQrPreview, setPresentePixQrPreview] = useState<
     string | null
   >(null);
 
@@ -888,6 +893,9 @@ export default function HomePage() {
     if (presenteImagemPreview?.startsWith('blob:')) {
       URL.revokeObjectURL(presenteImagemPreview);
     }
+    if (presentePixQrPreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(presentePixQrPreview);
+    }
     setPresenteId(null);
     setPresenteNome('');
     setPresenteValor('');
@@ -895,6 +903,10 @@ export default function HomePage() {
     setPresenteImagemUrl(null);
     setPresenteImagemFile(null);
     setPresenteImagemPreview(null);
+    setPresentePixChave('');
+    setPresentePixQrUrl(null);
+    setPresentePixQrFile(null);
+    setPresentePixQrPreview(null);
   }
 
   function onPresenteImagem(list?: FileList | null) {
@@ -922,15 +934,36 @@ export default function HomePage() {
     setPresenteImagemPreview(null);
   }
 
+  function onPresentePixQr(list?: FileList | null) {
+    if (presentePixQrPreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(presentePixQrPreview);
+    }
+    const file = Array.from(list ?? []).find((f) =>
+      f.type.startsWith('image/'),
+    );
+    if (!file) {
+      setPresentePixQrFile(null);
+      setPresentePixQrPreview(presentePixQrUrl);
+      return;
+    }
+    setPresentePixQrFile(file);
+    setPresentePixQrPreview(URL.createObjectURL(file));
+  }
+
+  function limparPresentePixQr() {
+    if (presentePixQrPreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(presentePixQrPreview);
+    }
+    setPresentePixQrFile(null);
+    setPresentePixQrUrl(null);
+    setPresentePixQrPreview(null);
+  }
+
   async function onRsvp(status: string, acompanhanteId?: string) {
     await run(
       () => putRsvp(token!, status, acompanhanteId),
       'RSVP atualizado',
     );
-  }
-
-  async function onReservar(id: string) {
-    await run(() => reservarPresente(token!, id), 'Presente reservado');
   }
 
   async function onSaveGasto(e: FormEvent) {
@@ -1016,12 +1049,20 @@ export default function HomePage() {
         const uploaded = await uploadPresenteImagem(token!, compactada);
         imagemUrl = uploaded.url;
       }
+      let pixQrCodeUrl = presentePixQrUrl;
+      if (presentePixQrFile) {
+        const compactada = await compactarFoto(presentePixQrFile, 1200, 0.92);
+        const uploaded = await uploadPresenteImagem(token!, compactada);
+        pixQrCodeUrl = uploaded.url;
+      }
       await upsertPresente(token!, {
         ...(presenteId ? { id: presenteId } : {}),
         nome: presenteNome,
         valorEstimado: presenteValor ? Number(presenteValor) : undefined,
         audiencia: presenteAudiencia,
         imagemUrl,
+        pixChave: presentePixChave.trim() || null,
+        pixQrCodeUrl,
       });
     }, presenteId ? 'Presente atualizado' : 'Presente cadastrado');
     resetPresente();
@@ -1414,6 +1455,9 @@ export default function HomePage() {
     if (presenteImagemPreview?.startsWith('blob:')) {
       URL.revokeObjectURL(presenteImagemPreview);
     }
+    if (presentePixQrPreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(presentePixQrPreview);
+    }
     setPresenteId(p.id);
     setPresenteNome(p.nome ?? '');
     setPresenteValor(
@@ -1425,6 +1469,10 @@ export default function HomePage() {
     setPresenteImagemUrl(p.imagemUrl ?? null);
     setPresenteImagemFile(null);
     setPresenteImagemPreview(p.imagemUrl ?? null);
+    setPresentePixChave(p.pixChave ?? '');
+    setPresentePixQrUrl(p.pixQrCodeUrl ?? null);
+    setPresentePixQrFile(null);
+    setPresentePixQrPreview(p.pixQrCodeUrl ?? null);
   }
 
   const cfg = data?.config ?? {};
@@ -2606,6 +2654,34 @@ export default function HomePage() {
                   </button>
                 </div>
               )}
+              <label>Chave Pix</label>
+              <input
+                value={presentePixChave}
+                onChange={(e) => setPresentePixChave(e.target.value)}
+                placeholder="CPF, e-mail, telefone ou chave aleatória"
+              />
+              <label>QR Code do Pix</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => onPresentePixQr(e.target.files)}
+              />
+              {presentePixQrPreview && (
+                <div className="presente-form-preview">
+                  <img
+                    src={presentePixQrPreview}
+                    alt="Prévia do QR Code Pix"
+                  />
+                  <button
+                    type="button"
+                    className="ghost"
+                    disabled={busy}
+                    onClick={limparPresentePixQr}
+                  >
+                    Remover QR Code
+                  </button>
+                </div>
+              )}
               <div className="row">
                 <button className="primary" disabled={busy}>
                   {presenteId ? 'Salvar alterações' : 'Cadastrar presente'}
@@ -2657,20 +2733,18 @@ export default function HomePage() {
             const reservadoPor = p.reservadoPorConvidadoId
               ? convidadoById.get(p.reservadoPorConvidadoId)
               : null;
-            let statusLabel = 'Disponível';
-            if (p.reservadoPorConvidadoId) {
-              if (gestao) {
+            let statusLabel: string | null = null;
+            if (gestao) {
+              statusLabel = 'Disponível';
+              if (p.reservadoPorConvidadoId) {
                 statusLabel = reservadoPor?.nome
                   ? `Reservado por ${reservadoPor.nome}`
                   : 'Reservado';
-              } else if (p.reservadoPorConvidadoId === user?.convidadoId) {
-                statusLabel = 'Você reservou';
-              } else {
-                statusLabel = 'Reservado';
               }
             }
             const audienciaLabel =
               p.audiencia === 'padrinhos' ? 'Padrinhos' : 'Convidados';
+            const temPix = Boolean(p.pixChave || p.pixQrCodeUrl);
             return (
               <div key={p.id} className="item presente-item">
                 {p.imagemUrl ? (
@@ -2693,9 +2767,35 @@ export default function HomePage() {
                   <p>
                     {p.valorEstimado != null
                       ? money(Number(p.valorEstimado))
-                      : 'Sem valor'}{' '}
-                    · {statusLabel}
+                      : 'Sem valor'}
+                    {statusLabel ? ` · ${statusLabel}` : ''}
                   </p>
+                  {temPix && (
+                    <div className="presente-pix">
+                      {p.pixQrCodeUrl ? (
+                        <img
+                          className="presente-pix__qr"
+                          src={p.pixQrCodeUrl}
+                          alt={`QR Code Pix de ${p.nome}`}
+                        />
+                      ) : null}
+                      {p.pixChave ? (
+                        <div className="presente-pix__chave">
+                          <span>Chave Pix: {p.pixChave}</span>
+                          <button
+                            type="button"
+                            className="ghost"
+                            onClick={() => {
+                              void navigator.clipboard.writeText(p.pixChave);
+                              setMsg('Chave Pix copiada');
+                            }}
+                          >
+                            Copiar
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
                   {gestao && (
                     <div className="row">
                       <button
@@ -2717,17 +2817,6 @@ export default function HomePage() {
                         }
                       >
                         Excluir
-                      </button>
-                    </div>
-                  )}
-                  {!gestao && !p.reservadoPorConvidadoId && (
-                    <div className="row">
-                      <button
-                        className="ghost"
-                        disabled={busy}
-                        onClick={() => onReservar(p.id)}
-                      >
-                        Reservar
                       </button>
                     </div>
                   )}

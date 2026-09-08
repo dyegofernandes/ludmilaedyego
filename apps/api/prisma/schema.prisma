@@ -225,6 +225,8 @@ model Presente {
   link                   String?
   valorEstimado          Decimal?          @db.Decimal(12, 2)
   imagemUrl              String?
+  pixChave               String?
+  pixQrCodeUrl           String?
   ativo                  Boolean           @default(true)
   audiencia              AudienciaPresente @default(convidados)
   reservadoPorConvidadoId String?

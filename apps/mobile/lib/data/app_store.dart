@@ -325,6 +325,8 @@ class AppStore extends ChangeNotifier {
           link: m['link']?.toString(),
           valorEstimado: (m['valorEstimado'] as num?)?.toDouble(),
           imagemUrl: m['imagemUrl']?.toString(),
+          pixChave: m['pixChave']?.toString(),
+          pixQrCodeUrl: m['pixQrCodeUrl']?.toString(),
           ativo: m['ativo'] != false,
           audiencia: audienciaPresenteFromDb(m['audiencia']?.toString()),
           reservadoPorConvidadoId: m['reservadoPorConvidadoId']?.toString(),
@@ -806,6 +808,8 @@ class AppStore extends ChangeNotifier {
         'link': p.link,
         'valorEstimado': p.valorEstimado,
         'imagemUrl': p.imagemUrl,
+        'pixChave': p.pixChave,
+        'pixQrCodeUrl': p.pixQrCodeUrl,
         'ativo': p.ativo,
         'audiencia': p.audiencia.dbValue,
       });

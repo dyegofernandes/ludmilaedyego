@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -32,7 +33,6 @@ class _PresentesScreenState extends State<PresentesScreen> {
     if (!guestMode && _filtroGestao != null) {
       list = list.where((p) => p.audiencia == _filtroGestao).toList();
     }
-    final meuId = store.meuConvidado?.id;
     final titulo = guestMode
         ? (store.isPadrinho
             ? 'Presentes dos padrinhos'
@@ -93,17 +93,8 @@ class _PresentesScreenState extends State<PresentesScreen> {
                   separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (_, i) {
                     final p = list[i];
-                    final minhaReserva = p.reservadoPorConvidadoId == meuId;
-                    String statusLabel;
-                    if (guestMode) {
-                      if (!p.reservado) {
-                        statusLabel = 'Disponível';
-                      } else if (minhaReserva) {
-                        statusLabel = 'Você reservou';
-                      } else {
-                        statusLabel = 'Reservado';
-                      }
-                    } else {
+                    String? statusLabel;
+                    if (!guestMode) {
                       if (!p.reservado) {
                         statusLabel = 'Livre';
                       } else {
@@ -124,18 +115,27 @@ class _PresentesScreenState extends State<PresentesScreen> {
                           if (!guestMode) p.audiencia.label,
                           if (p.valorEstimado != null)
                             formatMoney(p.valorEstimado!),
-                          statusLabel,
+                          if (statusLabel != null) statusLabel,
+                          if (p.temPix) 'Pix',
                         ].join(' · '),
                       ),
                       trailing: guestMode
-                          ? _guestActions(context, store, p, minhaReserva)
+                          ? (p.temPix
+                              ? const Icon(Icons.qr_code_2)
+                              : null)
                           : IconButton(
                               icon: const Icon(Icons.edit_outlined),
                               onPressed: () => _form(context, p),
                             ),
-                      onTap: p.link == null
-                          ? null
-                          : () => launchUrl(Uri.parse(p.link!)),
+                      onTap: () {
+                        if (guestMode) {
+                          _mostrarDetalhe(context, p);
+                          return;
+                        }
+                        if (p.link != null) {
+                          launchUrl(Uri.parse(p.link!));
+                        }
+                      },
                     );
                   },
                 ),
@@ -147,37 +147,80 @@ class _PresentesScreenState extends State<PresentesScreen> {
     );
   }
 
-  Widget _guestActions(
-    BuildContext context,
-    AppStore store,
-    Presente p,
-    bool minhaReserva,
-  ) {
-    if (!p.reservado) {
-      return TextButton(
-        onPressed: () async {
-          final err = await store.reservarPresente(p.id);
-          if (context.mounted && err != null) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text(err)));
-          }
-        },
-        child: const Text('Vou presentear'),
-      );
-    }
-    if (minhaReserva) {
-      return TextButton(
-        onPressed: () async {
-          final err = await store.cancelarReservaPresente(p.id);
-          if (context.mounted && err != null) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text(err)));
-          }
-        },
-        child: const Text('Cancelar'),
-      );
-    }
-    return const StatusChip(label: 'Reservado', color: AppColors.muted);
+  Future<void> _mostrarDetalhe(BuildContext context, Presente p) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) {
+        final chave = p.pixChave?.trim();
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(p.nome, style: Theme.of(ctx).textTheme.headlineSmall),
+              if (p.valorEstimado != null) ...[
+                const SizedBox(height: 4),
+                Text(formatMoney(p.valorEstimado!)),
+              ],
+              if (p.descricao != null && p.descricao!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(p.descricao!),
+              ],
+              if (p.pixQrCodeUrl != null && p.pixQrCodeUrl!.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Center(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      AppConstants.mediaUrl(p.pixQrCodeUrl!),
+                      width: 220,
+                      height: 220,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, _, _) => const Icon(
+                        Icons.qr_code_2,
+                        size: 80,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+              if (chave != null && chave.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                const Text('Chave Pix'),
+                const SizedBox(height: 4),
+                SelectableText(
+                  chave,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: chave));
+                      if (ctx.mounted) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(content: Text('Chave Pix copiada')),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.copy),
+                    label: const Text('Copiar chave'),
+                  ),
+                ),
+              ],
+              if (p.link != null && p.link!.isNotEmpty)
+                TextButton(
+                  onPressed: () => launchUrl(Uri.parse(p.link!)),
+                  child: const Text('Abrir link do presente'),
+                ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _form(BuildContext context, [Presente? existing]) async {
@@ -190,9 +233,13 @@ class _PresentesScreenState extends State<PresentesScreen> {
     );
     var ativo = existing?.ativo ?? true;
     var audiencia = existing?.audiencia ?? AudienciaPresente.convidados;
+    final pixChave = TextEditingController(text: existing?.pixChave ?? '');
     String? imagemUrl = existing?.imagemUrl;
     Uint8List? imagemBytes;
     String? imagemNome;
+    String? pixQrUrl = existing?.pixQrCodeUrl;
+    Uint8List? pixQrBytes;
+    String? pixQrNome;
 
     final ok = await showDialog<bool>(
       context: context,
@@ -309,6 +356,85 @@ class _PresentesScreenState extends State<PresentesScreen> {
                       ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: pixChave,
+                  decoration: const InputDecoration(
+                    labelText: 'Chave Pix',
+                    hintText: 'CPF, e-mail, telefone ou aleatória',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'QR Code do Pix',
+                    style: Theme.of(ctx).textTheme.labelLarge,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (pixQrBytes != null)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.memory(
+                      pixQrBytes!,
+                      height: 160,
+                      width: double.infinity,
+                      fit: BoxFit.contain,
+                    ),
+                  )
+                else if (pixQrUrl != null && pixQrUrl!.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      AppConstants.mediaUrl(pixQrUrl!),
+                      height: 160,
+                      width: double.infinity,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, _, _) => Container(
+                        height: 120,
+                        color: AppColors.surfaceElevated,
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.qr_code_2),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: () async {
+                        final picked = await ImagePicker().pickImage(
+                          source: ImageSource.gallery,
+                          imageQuality: 90,
+                          maxWidth: 1200,
+                        );
+                        if (picked == null) return;
+                        final bytes = await picked.readAsBytes();
+                        setLocal(() {
+                          pixQrBytes = bytes;
+                          pixQrNome = picked.name;
+                        });
+                      },
+                      icon: const Icon(Icons.qr_code_2),
+                      label: Text(
+                        pixQrBytes != null || (pixQrUrl?.isNotEmpty ?? false)
+                            ? 'Trocar QR Code'
+                            : 'Adicionar QR Code',
+                      ),
+                    ),
+                    if (pixQrBytes != null ||
+                        (pixQrUrl != null && pixQrUrl!.isNotEmpty))
+                      TextButton(
+                        onPressed: () => setLocal(() {
+                          pixQrBytes = null;
+                          pixQrNome = null;
+                          pixQrUrl = null;
+                        }),
+                        child: const Text('Remover'),
+                      ),
+                  ],
+                ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Ativo'),
@@ -354,11 +480,26 @@ class _PresentesScreenState extends State<PresentesScreen> {
     if (ok != true) return;
 
     var finalImagemUrl = imagemUrl;
+    var finalPixQrUrl = pixQrUrl;
     if (imagemBytes != null) {
       try {
         finalImagemUrl = await store.uploadPresenteImagem(
           imagemBytes!,
           imagemNome ?? 'presente.jpg',
+        );
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(e.toString())));
+        }
+        return;
+      }
+    }
+    if (pixQrBytes != null) {
+      try {
+        finalPixQrUrl = await store.uploadPresenteImagem(
+          pixQrBytes!,
+          pixQrNome ?? 'pix-qrcode.jpg',
         );
       } catch (e) {
         if (context.mounted) {
@@ -377,6 +518,8 @@ class _PresentesScreenState extends State<PresentesScreen> {
       valorEstimado: double.tryParse(valor.text.replaceAll(',', '.')),
       ativo: ativo,
       audiencia: audiencia,
+      pixChave: pixChave.text.trim().isEmpty ? null : pixChave.text.trim(),
+      pixQrCodeUrl: finalPixQrUrl,
       reservadoPorConvidadoId: existing?.reservadoPorConvidadoId,
       reservadoEm: existing?.reservadoEm,
       imagemUrl: finalImagemUrl,

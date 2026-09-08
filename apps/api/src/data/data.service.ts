@@ -380,6 +380,7 @@ export class DataService {
     if (!existing) throw new NotFoundException('Presente não encontrado');
     await this.prisma.presente.delete({ where: { id } });
     this.unlinkUpload(existing.imagemUrl);
+    this.unlinkUpload(existing.pixQrCodeUrl);
     return { ok: true };
   }
 
@@ -453,7 +454,9 @@ export class DataService {
       valorEstimado: number | null;
       ativo: boolean;
       audiencia: AudienciaPresente;
+      pixChave: string | null;
       imagemUrl?: string | null;
+      pixQrCodeUrl?: string | null;
     } = {
       nome: body.nome,
       descricao: body.descricao ?? null,
@@ -461,23 +464,30 @@ export class DataService {
       valorEstimado: body.valorEstimado ?? null,
       ativo: body.ativo ?? true,
       audiencia: this.parseAudienciaPresente(body.audiencia),
+      pixChave: String(body.pixChave ?? '').trim() || null,
     };
     let oldImagemUrl: string | null = null;
+    let oldPixQr: string | null = null;
+    const existing = body.id
+      ? await this.prisma.presente.findUnique({ where: { id: body.id } })
+      : null;
     if ('imagemUrl' in body) {
       data.imagemUrl = body.imagemUrl ?? null;
-      if (body.id) {
-        const existing = await this.prisma.presente.findUnique({
-          where: { id: body.id },
-        });
-        if (existing?.imagemUrl && existing.imagemUrl !== data.imagemUrl) {
-          oldImagemUrl = existing.imagemUrl;
-        }
+      if (existing?.imagemUrl && existing.imagemUrl !== data.imagemUrl) {
+        oldImagemUrl = existing.imagemUrl;
+      }
+    }
+    if ('pixQrCodeUrl' in body) {
+      data.pixQrCodeUrl = body.pixQrCodeUrl ?? null;
+      if (existing?.pixQrCodeUrl && existing.pixQrCodeUrl !== data.pixQrCodeUrl) {
+        oldPixQr = existing.pixQrCodeUrl;
       }
     }
     const p = body.id
       ? await this.prisma.presente.update({ where: { id: body.id }, data })
       : await this.prisma.presente.create({ data });
     if (oldImagemUrl) this.unlinkUpload(oldImagemUrl);
+    if (oldPixQr) this.unlinkUpload(oldPixQr);
     return { ...p, valorEstimado: this.dec(p.valorEstimado) };
   }
 

@@ -597,6 +597,8 @@ class Presente {
     this.link,
     this.valorEstimado,
     this.imagemUrl,
+    this.pixChave,
+    this.pixQrCodeUrl,
     this.ativo = true,
     this.audiencia = AudienciaPresente.convidados,
     this.reservadoPorConvidadoId,
@@ -609,12 +611,18 @@ class Presente {
   String? link;
   double? valorEstimado;
   String? imagemUrl;
+  String? pixChave;
+  String? pixQrCodeUrl;
   bool ativo;
   AudienciaPresente audiencia;
   String? reservadoPorConvidadoId;
   DateTime? reservadoEm;
 
   bool get reservado => reservadoPorConvidadoId != null;
+
+  bool get temPix =>
+      (pixChave != null && pixChave!.trim().isNotEmpty) ||
+      (pixQrCodeUrl != null && pixQrCodeUrl!.trim().isNotEmpty);
 }
 
 enum AudienciaPresente { convidados, padrinhos }
