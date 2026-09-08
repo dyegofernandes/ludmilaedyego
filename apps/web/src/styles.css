@@ -545,6 +545,24 @@ button.summary-tile {
   background: rgba(47, 42, 36, 0.06);
 }
 
+.presente-thumb-btn {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+  flex-shrink: 0;
+  border-radius: 12px;
+}
+
+.presente-thumb-btn:hover .presente-thumb {
+  transform: scale(1.04);
+}
+
+.presente-thumb-btn .presente-thumb {
+  display: block;
+  transition: transform 0.2s ease;
+}
+
 .presente-form-preview {
   display: flex;
   align-items: center;
@@ -573,6 +591,20 @@ button.summary-tile {
   border-radius: 12px;
   background: #fff;
   padding: 8px;
+  display: block;
+}
+
+.presente-pix__qr-btn {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+  width: fit-content;
+  border-radius: 12px;
+}
+
+.presente-pix__qr-btn:hover .presente-pix__qr {
+  box-shadow: 0 0 0 2px rgba(47, 42, 36, 0.18);
 }
 
 .presente-pix__chave {

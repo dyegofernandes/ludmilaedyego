@@ -2748,11 +2748,18 @@ export default function HomePage() {
             return (
               <div key={p.id} className="item presente-item">
                 {p.imagemUrl ? (
-                  <img
-                    className="presente-thumb"
-                    src={p.imagemUrl}
-                    alt={p.nome}
-                  />
+                  <button
+                    type="button"
+                    className="presente-thumb-btn"
+                    onClick={() => setFotoAberta(p.imagemUrl)}
+                    title="Ampliar imagem"
+                  >
+                    <img
+                      className="presente-thumb"
+                      src={p.imagemUrl}
+                      alt={p.nome}
+                    />
+                  </button>
                 ) : null}
                 <div className="presente-item__body">
                   <h3>
@@ -2773,11 +2780,18 @@ export default function HomePage() {
                   {temPix && (
                     <div className="presente-pix">
                       {p.pixQrCodeUrl ? (
-                        <img
-                          className="presente-pix__qr"
-                          src={p.pixQrCodeUrl}
-                          alt={`QR Code Pix de ${p.nome}`}
-                        />
+                        <button
+                          type="button"
+                          className="presente-pix__qr-btn"
+                          onClick={() => setFotoAberta(p.pixQrCodeUrl)}
+                          title="Ampliar QR Code"
+                        >
+                          <img
+                            className="presente-pix__qr"
+                            src={p.pixQrCodeUrl}
+                            alt={`QR Code Pix de ${p.nome}`}
+                          />
+                        </button>
                       ) : null}
                       {p.pixChave ? (
                         <div className="presente-pix__chave">
@@ -2993,13 +3007,6 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
-          )}
-
-          {fotoAberta && (
-            <FotoLightbox
-              src={fotoAberta}
-              onClose={() => setFotoAberta(null)}
-            />
           )}
         </div>
       )}
@@ -3425,6 +3432,14 @@ export default function HomePage() {
             );
           })}
         </div>
+      )}
+
+      {fotoAberta && (
+        <FotoLightbox
+          src={fotoAberta}
+          alt="Imagem ampliada"
+          onClose={() => setFotoAberta(null)}
+        />
       )}
     </div>
   );

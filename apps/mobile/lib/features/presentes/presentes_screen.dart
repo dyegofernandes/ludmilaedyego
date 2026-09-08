@@ -108,7 +108,18 @@ class _PresentesScreenState extends State<PresentesScreen> {
 
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: _PresenteThumb(url: p.imagemUrl),
+                      leading: GestureDetector(
+                        onTap: () {
+                          if (p.imagemUrl != null && p.imagemUrl!.isNotEmpty) {
+                            _abrirImagem(
+                              context,
+                              p.imagemUrl!,
+                              titulo: p.nome,
+                            );
+                          }
+                        },
+                        child: _PresenteThumb(url: p.imagemUrl),
+                      ),
                       title: Text(p.nome),
                       subtitle: Text(
                         [
@@ -147,6 +158,19 @@ class _PresentesScreenState extends State<PresentesScreen> {
     );
   }
 
+  Future<void> _abrirImagem(
+    BuildContext context,
+    String url, {
+    String titulo = 'Imagem',
+  }) {
+    return Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (_) => _ImagemAmpliada(url: url, titulo: titulo),
+      ),
+    );
+  }
+
   Future<void> _mostrarDetalhe(BuildContext context, Presente p) async {
     await showModalBottomSheet<void>(
       context: context,
@@ -169,21 +193,59 @@ class _PresentesScreenState extends State<PresentesScreen> {
                 const SizedBox(height: 8),
                 Text(p.descricao!),
               ],
+              if (p.imagemUrl != null && p.imagemUrl!.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Center(
+                  child: GestureDetector(
+                    onTap: () => _abrirImagem(
+                      ctx,
+                      p.imagemUrl!,
+                      titulo: p.nome,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        AppConstants.mediaUrl(p.imagemUrl!),
+                        height: 160,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => const Icon(
+                          Icons.broken_image,
+                          size: 48,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               if (p.pixQrCodeUrl != null && p.pixQrCodeUrl!.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Center(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      AppConstants.mediaUrl(p.pixQrCodeUrl!),
-                      width: 220,
-                      height: 220,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) => const Icon(
-                        Icons.qr_code_2,
-                        size: 80,
+                  child: GestureDetector(
+                    onTap: () => _abrirImagem(
+                      ctx,
+                      p.pixQrCodeUrl!,
+                      titulo: 'QR Code Pix',
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        AppConstants.mediaUrl(p.pixQrCodeUrl!),
+                        width: 220,
+                        height: 220,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, _, _) => const Icon(
+                          Icons.qr_code_2,
+                          size: 80,
+                        ),
                       ),
                     ),
+                  ),
+                ),
+                const Center(
+                  child: Text(
+                    'Toque no QR Code para ampliar',
+                    style: TextStyle(fontSize: 12),
                   ),
                 ),
               ],
@@ -528,6 +590,40 @@ class _PresentesScreenState extends State<PresentesScreen> {
     if (context.mounted && err != null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
     }
+  }
+}
+
+class _ImagemAmpliada extends StatelessWidget {
+  const _ImagemAmpliada({required this.url, required this.titulo});
+
+  final String url;
+  final String titulo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF1A1612),
+      appBar: AppBar(
+        backgroundColor: Colors.black.withValues(alpha: 0.35),
+        foregroundColor: Colors.white,
+        title: Text(titulo, style: const TextStyle(color: Colors.white)),
+      ),
+      body: InteractiveViewer(
+        minScale: 1,
+        maxScale: 6,
+        child: Center(
+          child: Image.network(
+            AppConstants.mediaUrl(url),
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) => const Icon(
+              Icons.broken_image,
+              color: Colors.white70,
+              size: 64,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
