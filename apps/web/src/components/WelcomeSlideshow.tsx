@@ -9,6 +9,31 @@ export const WEDDING_DATE_SHORT = '17/10/2026';
 /** Trilha do slideshow (substitua o MP3 por Perfect acústico licenciado). */
 export const WELCOME_MUSIC = '/welcome/bg-music.mp3';
 
+let sharedAudio: HTMLAudioElement | null = null;
+
+export function getWelcomeAudio() {
+  if (typeof Audio === 'undefined') return null;
+  if (!sharedAudio) {
+    sharedAudio = new Audio(WELCOME_MUSIC);
+    sharedAudio.loop = true;
+    sharedAudio.volume = 0.55;
+    sharedAudio.preload = 'auto';
+  }
+  return sharedAudio;
+}
+
+export function unlockWelcomeAudio() {
+  const a = getWelcomeAudio();
+  if (!a) return Promise.resolve();
+  return a.play().catch(() => undefined);
+}
+
+export function stopWelcomeAudio() {
+  if (!sharedAudio) return;
+  sharedAudio.pause();
+  sharedAudio.currentTime = 0;
+}
+
 export const welcomeSlides = [
   {
     src: '/welcome/01.jpg',
@@ -58,15 +83,14 @@ export function WelcomeSlideshow({
 }: Props) {
   const [index, setIndex] = useState(0);
   const [musicOn, setMusicOn] = useState(true);
+  const musicOnRef = useRef(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const last = index >= welcomeSlides.length - 1;
   const slide = welcomeSlides[index];
+  musicOnRef.current = musicOn;
 
   const stopMusic = useCallback(() => {
-    const a = audioRef.current;
-    if (!a) return;
-    a.pause();
-    a.currentTime = 0;
+    stopWelcomeAudio();
   }, []);
 
   const finish = useCallback(() => {
@@ -79,29 +103,28 @@ export function WelcomeSlideshow({
   }, []);
 
   useEffect(() => {
-    const audio = new Audio(WELCOME_MUSIC);
-    audio.loop = true;
-    audio.volume = 0.55;
-    audio.preload = 'auto';
+    const audio = getWelcomeAudio();
     audioRef.current = audio;
+    if (!audio) return;
     const tryPlay = () => {
-      void audio.play().catch(() => {
-        /* autoplay bloqueado — usuário liga pelo botão */
-        setMusicOn(false);
-      });
+      if (!musicOnRef.current) return;
+      void audio.play().then(() => setMusicOn(true));
     };
     tryPlay();
+    window.addEventListener('pointerdown', tryPlay, true);
+    window.addEventListener('keydown', tryPlay, true);
     return () => {
-      audio.pause();
+      window.removeEventListener('pointerdown', tryPlay, true);
+      window.removeEventListener('keydown', tryPlay, true);
       audioRef.current = null;
     };
   }, []);
 
   useEffect(() => {
-    const a = audioRef.current;
+    const a = audioRef.current ?? getWelcomeAudio();
     if (!a) return;
     if (musicOn) {
-      void a.play().catch(() => setMusicOn(false));
+      void a.play().then(() => setMusicOn(true));
     } else {
       a.pause();
     }

@@ -174,8 +174,12 @@ class AppStore extends ChangeNotifier {
 
   DateTime? _parseDate(dynamic v) {
     if (v == null) return null;
-    return DateTime.tryParse(v.toString());
+    final d = DateTime.tryParse(v.toString());
+    if (d == null) return null;
+    return d.isUtc ? d.toLocal() : d;
   }
+
+  String? _toApiDate(DateTime? d) => d?.toUtc().toIso8601String();
 
   List<Acompanhante> _parseAcomps(dynamic raw) {
     if (raw is! List) return [];
@@ -587,7 +591,7 @@ class AppStore extends ChangeNotifier {
       await _api.put('/api/config', {
         'nomeNoivo': c.nomeNoivo,
         'nomeNoiva': c.nomeNoiva,
-        'dataCerimonia': c.dataCerimonia?.toIso8601String(),
+        'dataCerimonia': _toApiDate(c.dataCerimonia),
         'local': c.local,
         'localCerimonia': c.localCerimonia,
         'enderecoCerimonia': c.enderecoCerimonia,
@@ -622,8 +626,8 @@ class AppStore extends ChangeNotifier {
         'valorPrevisto': g.valorPrevisto,
         'valorReal': g.valorReal,
         'status': g.status.dbValue,
-        'dataPrevista': g.dataPrevista?.toIso8601String(),
-        'dataPagamento': g.dataPagamento?.toIso8601String(),
+        'dataPrevista': _toApiDate(g.dataPrevista),
+        'dataPagamento': _toApiDate(g.dataPagamento),
         'observacoes': g.observacoes,
       });
       await refreshAll();
@@ -652,7 +656,7 @@ class AppStore extends ChangeNotifier {
         'status': t.status.dbValue,
         'prioridade': t.prioridade.dbValue,
         'destino': t.destino.dbValue,
-        'prazo': t.prazo?.toIso8601String(),
+        'prazo': _toApiDate(t.prazo),
         'padrinhoId': t.padrinhoId,
         'criadoPor': t.criadoPor ?? currentUser?.id,
       });
@@ -669,8 +673,8 @@ class AppStore extends ChangeNotifier {
         if (c.id.isNotEmpty && !c.id.startsWith('local-')) 'id': c.id,
         'titulo': c.titulo,
         'descricao': c.descricao,
-        'inicio': c.inicio.toIso8601String(),
-        'fim': c.fim?.toIso8601String(),
+        'inicio': _toApiDate(c.inicio),
+        'fim': _toApiDate(c.fim),
         'local': c.local,
       });
       await refreshAll();
@@ -985,7 +989,7 @@ class AppStore extends ChangeNotifier {
     try {
       await _api.put('/api/despedida/evento', {
         'tipo': e.tipo.dbValue,
-        'data': e.data?.toIso8601String(),
+        'data': _toApiDate(e.data),
         'local': e.local,
         'endereco': e.endereco,
         'observacoes': e.observacoes,

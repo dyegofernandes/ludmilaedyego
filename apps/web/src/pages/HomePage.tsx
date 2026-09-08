@@ -183,6 +183,13 @@ function toLocalInput(v?: string | null) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function fromLocalInput(v?: string | null) {
+  if (!v) return null;
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+
 function toDateInput(v?: string | null) {
   if (!v) return '';
   const d = new Date(v);
@@ -1266,7 +1273,7 @@ export default function HomePage() {
         salvarConfig(token!, {
           nomeNoivo: evtNomeNoivo,
           nomeNoiva: evtNomeNoiva,
-          dataCerimonia: evtData || null,
+          dataCerimonia: fromLocalInput(evtData),
           local: evtLocalCerim || null,
           localCerimonia: evtLocalCerim || null,
           enderecoCerimonia: evtEndCerim || null,

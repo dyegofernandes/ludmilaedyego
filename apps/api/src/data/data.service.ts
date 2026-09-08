@@ -49,6 +49,26 @@ export class DataService {
     return Number(v);
   }
 
+  /** Data sem fuso (ex.: datetime-local) vale como horário de Brasília. */
+  private parseDateTime(v: unknown): Date | null {
+    if (v == null || v === '') return null;
+    const s = String(v).trim();
+    if (!s) return null;
+    if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(s)) {
+      const d = new Date(s);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      const d = new Date(`${s}T00:00:00-03:00`);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+    const normalized = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(s)
+      ? `${s}:00`
+      : s;
+    const d = new Date(`${normalized}-03:00`);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
   private mapConfig(c: any) {
     return {
       id: c.id,
@@ -251,7 +271,7 @@ export class DataService {
     const data = {
       nomeNoivo: body.nomeNoivo,
       nomeNoiva: body.nomeNoiva,
-      dataCerimonia: body.dataCerimonia ? new Date(body.dataCerimonia) : null,
+      dataCerimonia: this.parseDateTime(body.dataCerimonia),
       local: body.local ?? null,
       localCerimonia: body.localCerimonia ?? null,
       enderecoCerimonia: body.enderecoCerimonia ?? null,
@@ -278,8 +298,8 @@ export class DataService {
       valorPrevisto: body.valorPrevisto ?? 0,
       valorReal: body.valorReal ?? null,
       status: body.status ?? 'pendente',
-      dataPrevista: body.dataPrevista ? new Date(body.dataPrevista) : null,
-      dataPagamento: body.dataPagamento ? new Date(body.dataPagamento) : null,
+      dataPrevista: this.parseDateTime(body.dataPrevista),
+      dataPagamento: this.parseDateTime(body.dataPagamento),
       observacoes: body.observacoes ?? null,
     };
     const g = body.id
@@ -309,7 +329,7 @@ export class DataService {
       status: body.status ?? 'pendente',
       prioridade: (body.prioridade as Prioridade) ?? Prioridade.media,
       destino: (body.destino as DestinoTarefa) ?? DestinoTarefa.noivos,
-      prazo: body.prazo ? new Date(body.prazo) : null,
+      prazo: this.parseDateTime(body.prazo),
       padrinhoId: body.padrinhoId ?? null,
       criadoPor: body.criadoPor ?? user.id,
     };
@@ -331,8 +351,8 @@ export class DataService {
     const data = {
       titulo: body.titulo,
       descricao: body.descricao ?? null,
-      inicio: new Date(body.inicio),
-      fim: body.fim ? new Date(body.fim) : null,
+      inicio: this.parseDateTime(body.inicio) ?? new Date(body.inicio),
+      fim: this.parseDateTime(body.fim),
       local: body.local ?? null,
       criadoPor: user.id,
     };
@@ -747,13 +767,13 @@ export class DataService {
       where: { tipo: body.tipo as TipoDespedida },
       create: {
         tipo: body.tipo,
-        data: body.data ? new Date(body.data) : null,
+        data: this.parseDateTime(body.data),
         local: body.local ?? null,
         endereco: body.endereco ?? null,
         observacoes: body.observacoes ?? null,
       },
       update: {
-        data: body.data ? new Date(body.data) : null,
+        data: this.parseDateTime(body.data),
         local: body.local ?? null,
         endereco: body.endereco ?? null,
         observacoes: body.observacoes ?? null,

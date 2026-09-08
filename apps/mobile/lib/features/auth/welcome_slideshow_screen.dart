@@ -38,7 +38,7 @@ class _WelcomeSlideshowScreenState extends State<WelcomeSlideshowScreen> {
       await _player.play(AssetSource('welcome/bg-music.mp3'));
       if (mounted) setState(() => _musicOn = true);
     } catch (_) {
-      if (mounted) setState(() => _musicOn = false);
+      /* autoplay pode falhar; o botão de música e o toque no slide tentam de novo */
     }
   }
 

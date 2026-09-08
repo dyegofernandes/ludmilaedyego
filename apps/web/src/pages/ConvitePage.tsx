@@ -2,19 +2,23 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { BrandLogo } from '../components/Brand';
+import { unlockWelcomeAudio } from '../components/WelcomeSlideshow';
 
 /**
  * Entra com o código do convite e deixa a Home exibir o slideshow
  * (flag welcome_pending setada em loginWithToken).
+ * O toque inicial destrava o áudio (os navegadores bloqueiam autoplay).
  */
 export default function ConvitePage() {
   const { codigo } = useParams();
   const { loginWithToken } = useAuth();
+  const [opened, setOpened] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
-  const [busy, setBusy] = useState(true);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    if (!opened) return;
     const code = codigo?.trim();
     if (!code) {
       setError('Link inválido');
@@ -40,9 +44,28 @@ export default function ConvitePage() {
     return () => {
       cancelled = true;
     };
-  }, [codigo, loginWithToken]);
+  }, [opened, codigo, loginWithToken]);
 
   if (ok) return <Navigate to="/" replace />;
+
+  if (!opened) {
+    return (
+      <div className="center">
+        <button
+          type="button"
+          className="welcome-unlock"
+          onClick={() => {
+            void unlockWelcomeAudio();
+            setOpened(true);
+          }}
+        >
+          <BrandLogo size={140} />
+          <p>Toque para abrir o convite</p>
+          <span>A música começa junto com o slide</span>
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="center">
