@@ -70,12 +70,12 @@ export class DataService {
   private normalizeUrlPublica(v: unknown): string | null {
     let s = String(v ?? '').trim();
     if (!s) return null;
-    if (!/^https?:\/\//i.test(s)) s = `http://${s}`;
+    if (!/^https?:\/\//i.test(s)) s = `https://${s}`;
     s = s.replace(/\/+$/, '');
     try {
       const u = new URL(s);
       if (u.hostname === 'ludmilaedyego.ddns.net') {
-        u.protocol = 'http:';
+        u.protocol = 'https:';
         if (!u.port) u.port = '8087';
         return u.origin;
       }
