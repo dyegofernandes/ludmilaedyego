@@ -103,6 +103,7 @@ model CasamentoConfig {
   capaUrl            String?
   whatsapp           String?
   mensagemBoasVindas String?
+  urlPublica         String?
   updatedAt          DateTime  @updatedAt
 }
 

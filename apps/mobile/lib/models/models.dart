@@ -191,6 +191,7 @@ class CasamentoConfig {
     this.capaUrl,
     this.whatsapp,
     this.mensagemBoasVindas,
+    this.urlPublica,
   });
 
   final String id;
@@ -206,6 +207,7 @@ class CasamentoConfig {
   String? capaUrl;
   String? whatsapp;
   String? mensagemBoasVindas;
+  String? urlPublica;
 
   String get nomesHero => '$nomeNoiva & $nomeNoivo';
 
@@ -236,6 +238,7 @@ class CasamentoConfig {
     String? capaUrl,
     String? whatsapp,
     String? mensagemBoasVindas,
+    String? urlPublica,
     bool clearCapa = false,
     bool clearData = false,
   }) {
@@ -252,6 +255,7 @@ class CasamentoConfig {
       capaUrl: clearCapa ? null : (capaUrl ?? this.capaUrl),
       whatsapp: whatsapp ?? this.whatsapp,
       mensagemBoasVindas: mensagemBoasVindas ?? this.mensagemBoasVindas,
+      urlPublica: urlPublica ?? this.urlPublica,
     );
   }
 }

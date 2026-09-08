@@ -24,6 +24,7 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
   late final TextEditingController _enderecoFesta;
   late final TextEditingController _whats;
   late final TextEditingController _msg;
+  late final TextEditingController _urlPublica;
   DateTime? _data;
   bool _saving = false;
 
@@ -42,6 +43,7 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
     _enderecoFesta = TextEditingController(text: c.enderecoFesta ?? '');
     _whats = TextEditingController(text: c.whatsapp ?? '');
     _msg = TextEditingController(text: c.mensagemBoasVindas ?? '');
+    _urlPublica = TextEditingController(text: c.urlPublica ?? '');
     _data = c.dataCerimonia;
   }
 
@@ -55,6 +57,7 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
     _enderecoFesta.dispose();
     _whats.dispose();
     _msg.dispose();
+    _urlPublica.dispose();
     super.dispose();
   }
 
@@ -110,6 +113,7 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
       enderecoFesta: _enderecoFesta.text.trim(),
       whatsapp: _whats.text.trim(),
       mensagemBoasVindas: _msg.text.trim(),
+      urlPublica: _urlPublica.text.trim(),
       dataCerimonia: _data,
     );
     final err = await store.salvarConfig(next);
@@ -328,6 +332,15 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
                   labelText: 'Endereço completo — festa (Maps)',
                 ),
                 maxLines: 2,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _urlPublica,
+                keyboardType: TextInputType.url,
+                decoration: const InputDecoration(
+                  labelText: 'Link público do site (convites)',
+                  hintText: 'http://ludmilaedyego.ddns.net:8087',
+                ),
               ),
               const SizedBox(height: 12),
               TextField(

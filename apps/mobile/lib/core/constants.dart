@@ -16,8 +16,11 @@ class AppConstants {
   static const fallbackNomeNoiva = 'Ludmila';
   static const brandLogoAsset = 'assets/branding/logo_ludmila_dyego.png';
 
-  static String conviteUrl(String codigo) {
-    final base = webBaseUrl.replaceAll(RegExp(r'/$'), '');
+  static String conviteUrl(String codigo, {String? baseUrl}) {
+    final raw = (baseUrl != null && baseUrl.trim().isNotEmpty)
+        ? baseUrl.trim()
+        : webBaseUrl;
+    final base = raw.replaceAll(RegExp(r'/$'), '');
     final code = codigo.trim();
     return '$base/convite/$code';
   }

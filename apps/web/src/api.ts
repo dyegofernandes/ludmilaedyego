@@ -123,13 +123,15 @@ export async function completarCadastroConvidado(
   return api(token, 'POST', '/auth/completar-cadastro', input);
 }
 
-export function conviteLink(codigo?: string | null) {
+export function conviteLink(codigo?: string | null, baseUrl?: string | null) {
   if (!codigo) return '';
+  const fromConfig = String(baseUrl || '').replace(/\/+$/, '');
   const configured = (import.meta.env.VITE_PUBLIC_WEB_URL || '').replace(
     /\/$/,
     '',
   );
   const origin =
+    fromConfig ||
     configured ||
     (typeof window !== 'undefined' ? window.location.origin : '');
   return `${origin}/convite/${encodeURIComponent(codigo)}`;

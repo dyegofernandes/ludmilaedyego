@@ -51,6 +51,9 @@ class AppStore extends ChangeNotifier {
   List<Presente> get presentesPadrinhos =>
       presentes.where((p) => p.audiencia == AudienciaPresente.padrinhos).toList();
 
+  String conviteUrl(String codigo) =>
+      AppConstants.conviteUrl(codigo, baseUrl: config.urlPublica);
+
   Convidado? get meuConvidado {
     final cid = currentUser?.convidadoId;
     if (cid != null && cid.isNotEmpty) {
@@ -216,6 +219,7 @@ class AppStore extends ChangeNotifier {
         capaUrl: c['capaUrl']?.toString(),
         whatsapp: c['whatsapp']?.toString(),
         mensagemBoasVindas: c['mensagemBoasVindas']?.toString(),
+        urlPublica: c['urlPublica']?.toString(),
       );
     }
 
@@ -426,6 +430,7 @@ class AppStore extends ChangeNotifier {
               capaUrl: pub['capaUrl']?.toString(),
               whatsapp: pub['whatsapp']?.toString(),
               mensagemBoasVindas: pub['mensagemBoasVindas']?.toString(),
+              urlPublica: pub['urlPublica']?.toString(),
             );
           }
         } catch (_) {}
@@ -591,6 +596,7 @@ class AppStore extends ChangeNotifier {
         'capaUrl': c.capaUrl,
         'whatsapp': c.whatsapp,
         'mensagemBoasVindas': c.mensagemBoasVindas,
+        'urlPublica': c.urlPublica,
       });
       await refreshAll();
       return null;

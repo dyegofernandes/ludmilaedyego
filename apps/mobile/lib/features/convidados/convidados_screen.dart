@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/constants.dart';
 import '../../core/invite_message.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/brand_widgets.dart';
@@ -114,7 +113,7 @@ class _ConvidadosScreenState extends State<ConvidadosScreen> {
               itemBuilder: (_, i) {
                 final c = list[i];
                 final link =
-                    c.token == null ? null : AppConstants.conviteUrl(c.token!);
+                    c.token == null ? null : store.conviteUrl(c.token!);
                 return ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(c.nome),
@@ -358,7 +357,7 @@ class _ConvidadosScreenState extends State<ConvidadosScreen> {
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Link de acesso'),
                     subtitle: Text(
-                      AppConstants.conviteUrl(token!),
+                      store.conviteUrl(token!),
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                       ),
@@ -368,7 +367,7 @@ class _ConvidadosScreenState extends State<ConvidadosScreen> {
                       onPressed: () async {
                         await Clipboard.setData(
                           ClipboardData(
-                            text: AppConstants.conviteUrl(token!),
+                            text: store.conviteUrl(token!),
                           ),
                         );
                         if (ctx.mounted) {
@@ -467,7 +466,7 @@ class _ConvidadosScreenState extends State<ConvidadosScreen> {
     } else if (context.mounted) {
       final match = store.convidados.where((x) => x.nome == c.nome);
       final code = (match.isNotEmpty ? match.first.token : null) ?? c.token;
-      final link = code == null ? null : AppConstants.conviteUrl(code);
+      final link = code == null ? null : store.conviteUrl(code);
       if (link != null) {
         await Clipboard.setData(ClipboardData(text: link));
       }
@@ -489,7 +488,7 @@ class _ConvidadosScreenState extends State<ConvidadosScreen> {
       code = store.convidadoById(c.id)?.token;
     }
     if (code == null || !context.mounted) return;
-    final link = AppConstants.conviteUrl(code);
+    final link = store.conviteUrl(code);
     await Clipboard.setData(ClipboardData(text: link));
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -507,7 +506,7 @@ class _ConvidadosScreenState extends State<ConvidadosScreen> {
     }
     if (code == null || !context.mounted) return;
 
-    final link = AppConstants.conviteUrl(code);
+    final link = store.conviteUrl(code);
     final caption = InviteMessage.caption(link: link);
 
     try {

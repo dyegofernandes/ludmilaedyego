@@ -404,6 +404,7 @@ export default function HomePage() {
   const [evtEndFesta, setEvtEndFesta] = useState('');
   const [evtWhatsapp, setEvtWhatsapp] = useState('');
   const [evtMsg, setEvtMsg] = useState('');
+  const [evtUrlPublica, setEvtUrlPublica] = useState('');
 
   const [cardId, setCardId] = useState<string | null>(null);
   const [cardTitulo, setCardTitulo] = useState('');
@@ -803,6 +804,7 @@ export default function HomePage() {
     setEvtEndFesta(String(c.enderecoFesta ?? ''));
     setEvtWhatsapp(String(c.whatsapp ?? ''));
     setEvtMsg(String(c.mensagemBoasVindas ?? ''));
+    setEvtUrlPublica(String(c.urlPublica ?? ''));
   }, [data?.config]);
 
   const lastDespKey = useRef('');
@@ -1147,8 +1149,12 @@ export default function HomePage() {
     setSenhaConfirma('');
   }
 
+  function linkConvite(codigo?: string | null) {
+    return conviteLink(codigo, data?.config?.urlPublica || evtUrlPublica);
+  }
+
   async function copyConvite(codigo?: string | null) {
-    const link = conviteLink(codigo);
+    const link = linkConvite(codigo);
     if (!link) {
       setMsg('Gere o link deste convidado primeiro');
       return;
@@ -1202,7 +1208,7 @@ export default function HomePage() {
     setBusy(true);
     try {
       const codigo = await ensureConvidadoToken(id, opts.token);
-      const link = conviteLink(codigo);
+      const link = linkConvite(codigo);
       if (!link) {
         setMsg('Não foi possível gerar o link deste convidado.');
         return;
@@ -1267,6 +1273,7 @@ export default function HomePage() {
           enderecoFesta: evtEndFesta || null,
           whatsapp: evtWhatsapp || null,
           mensagemBoasVindas: evtMsg || null,
+          urlPublica: evtUrlPublica || null,
         }),
       'Dados do evento salvos',
     );
@@ -2344,7 +2351,7 @@ export default function HomePage() {
                         Link de acesso:
                       </p>
                       <p className="hint" style={{ textAlign: 'left', wordBreak: 'break-all' }}>
-                        {conviteLink(convToken)}
+                        {linkConvite(convToken)}
                       </p>
                     </>
                   )}
@@ -2435,8 +2442,8 @@ export default function HomePage() {
                   <p className="hint" style={{ textAlign: 'left', wordBreak: 'break-all' }}>
                     Link de acesso:{' '}
                     {c.token ? (
-                      <a href={conviteLink(c.token)} target="_blank" rel="noreferrer">
-                        {conviteLink(c.token)}
+                      <a href={linkConvite(c.token)} target="_blank" rel="noreferrer">
+                        {linkConvite(c.token)}
                       </a>
                     ) : (
                       <span>ainda não gerado</span>
@@ -2873,7 +2880,7 @@ export default function HomePage() {
                 {c.ativo ? ' · ativo' : ' · inativo'}
               </p>
               <p className="hint" style={{ wordBreak: 'break-all' }}>
-                {conviteLink(c.token)}
+                {linkConvite(c.token)}
               </p>
               <button
                 type="button"
@@ -3056,6 +3063,16 @@ export default function HomePage() {
                   value={evtEndFesta}
                   onChange={(e) => setEvtEndFesta(e.target.value)}
                 />
+                <label>Link público do site (convites)</label>
+                <input
+                  value={evtUrlPublica}
+                  onChange={(e) => setEvtUrlPublica(e.target.value)}
+                  placeholder="http://ludmilaedyego.ddns.net:8087"
+                />
+                <p className="hint" style={{ textAlign: 'left' }}>
+                  Os convites usam este endereço no lugar do IP. Ex.:
+                  http://ludmilaedyego.ddns.net:8087/convite/CODIGO
+                </p>
                 <label>WhatsApp</label>
                 <input
                   value={evtWhatsapp}

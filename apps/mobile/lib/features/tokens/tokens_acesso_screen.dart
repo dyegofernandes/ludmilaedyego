@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/constants.dart';
 import '../../core/widgets/brand_widgets.dart';
 import '../../data/app_store.dart';
 import '../../models/models.dart';
@@ -37,7 +36,7 @@ class TokensAcessoScreen extends StatelessWidget {
           separatorBuilder: (_, _) => const Divider(height: 1),
           itemBuilder: (_, i) {
             final c = lista[i];
-            final link = AppConstants.conviteUrl(c.token);
+            final link = store.conviteUrl(c.token);
             return ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(c.nome),
@@ -92,7 +91,7 @@ class TokensAcessoScreen extends StatelessWidget {
       return;
     }
     final token = store.convites.last.token;
-    final link = AppConstants.conviteUrl(token);
+    final link = store.conviteUrl(token);
     await Clipboard.setData(ClipboardData(text: link));
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

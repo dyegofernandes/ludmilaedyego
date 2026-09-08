@@ -63,7 +63,15 @@ export class DataService {
       capaUrl: c.capaUrl,
       whatsapp: c.whatsapp,
       mensagemBoasVindas: c.mensagemBoasVindas,
+      urlPublica: c.urlPublica,
     };
+  }
+
+  private normalizeUrlPublica(v: unknown): string | null {
+    let s = String(v ?? '').trim();
+    if (!s) return null;
+    if (!/^https?:\/\//i.test(s)) s = `http://${s}`;
+    return s.replace(/\/+$/, '');
   }
 
   private normalizeAcomps(raw: unknown, convidadoId?: string) {
@@ -241,6 +249,9 @@ export class DataService {
       capaUrl: body.capaUrl ?? null,
       whatsapp: body.whatsapp ?? null,
       mensagemBoasVindas: body.mensagemBoasVindas ?? null,
+      ...('urlPublica' in body
+        ? { urlPublica: this.normalizeUrlPublica(body.urlPublica) }
+        : {}),
     };
     const c = existing
       ? await this.prisma.casamentoConfig.update({ where: { id: existing.id }, data })
