@@ -7,7 +7,6 @@ import '../../core/widgets/cadastro_convidado.dart';
 import '../../core/widgets/evento_info.dart';
 import '../../core/widgets/rsvp_confirm.dart';
 import '../../data/app_store.dart';
-import '../../models/models.dart';
 
 class ConvidadoHomeScreen extends StatelessWidget {
   const ConvidadoHomeScreen({super.key});
@@ -15,6 +14,7 @@ class ConvidadoHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
+    final pendente = store.meuConvidado?.rsvpGrupoPendente == true;
 
     return Scaffold(
       body: SoftBackground(
@@ -35,7 +35,7 @@ class ConvidadoHomeScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              if (store.meuConvidado?.rsvpGrupoPendente == true) ...[
+              if (pendente) ...[
                 RsvpGrupoBlock(
                   convidado: store.meuConvidado!,
                   onSelect: (s, {acompanhanteId}) async {
@@ -49,31 +49,29 @@ class ConvidadoHomeScreen extends StatelessWidget {
                     }
                   },
                 ),
-              ] else ...[
-                if (store.config.mensagemBoasVindas?.isNotEmpty == true) ...[
-                  Text(
-                    store.config.mensagemBoasVindas!,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                  const SizedBox(height: 20),
-                ],
-                const EventoInfoSection(),
-              ],
-              if (store.meuConvidado?.rsvpGrupoPendente != true) ...[
                 const SizedBox(height: 28),
-                const CadastroConvidadoBlock(),
-                const SizedBox(height: 28),
-                GlassMenuTile(
-                  icon: Icons.card_giftcard_outlined,
-                  label: 'Lista de presentes',
-                  onTap: () => context.push('/presentes-guest'),
-                ),
-                GlassMenuTile(
-                  icon: Icons.photo_library_outlined,
-                  label: 'Fotos',
-                  onTap: () => context.push('/fotos-guest'),
-                ),
               ],
+              if (store.config.mensagemBoasVindas?.isNotEmpty == true) ...[
+                Text(
+                  store.config.mensagemBoasVindas!,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+                const SizedBox(height: 20),
+              ],
+              const EventoInfoSection(),
+              const SizedBox(height: 28),
+              const CadastroConvidadoBlock(),
+              const SizedBox(height: 28),
+              GlassMenuTile(
+                icon: Icons.card_giftcard_outlined,
+                label: 'Lista de presentes',
+                onTap: () => context.push('/presentes-guest'),
+              ),
+              GlassMenuTile(
+                icon: Icons.photo_library_outlined,
+                label: 'Fotos',
+                onTap: () => context.push('/fotos-guest'),
+              ),
             ],
           ),
         ),

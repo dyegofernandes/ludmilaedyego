@@ -793,14 +793,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (tab === 'conta' && !isNoivo && !isGuest) setTab('resumo');
-    if (
-      isGuest &&
-      rsvpGrupoPendente &&
-      (tab === 'presentes' || tab === 'evento' || tab === 'fotos')
-    ) {
-      setTab('resumo');
-    }
-  }, [tab, isNoivo, isGuest, rsvpGrupoPendente]);
+  }, [tab, isNoivo, isGuest]);
 
   useEffect(() => {
     if (!token || !isNoivo || tab !== 'conta') return;
@@ -854,10 +847,10 @@ export default function HomePage() {
     { id: 'agenda', label: 'Agenda', show: gestao },
     { id: 'convidados', label: 'Convidados', show: gestao },
     { id: 'padrinhos', label: 'Padrinhos', show: gestao },
-    { id: 'presentes', label: role === 'padrinho' ? 'Presentes dos padrinhos' : 'Presentes', show: !isGuest || !rsvpGrupoPendente },
+    { id: 'presentes', label: role === 'padrinho' ? 'Presentes dos padrinhos' : 'Presentes', show: true },
     { id: 'tokens', label: 'Cerimonialista', show: gestao },
-    { id: 'evento', label: 'Evento', show: gestao || !rsvpGrupoPendente },
-    { id: 'fotos', label: 'Fotos', show: !isGuest || !rsvpGrupoPendente },
+    { id: 'evento', label: 'Evento', show: gestao || isGuest },
+    { id: 'fotos', label: 'Fotos', show: true },
     { id: 'despedida', label: 'Despedida', show: gestao },
     { id: 'conta', label: 'Conta', show: isNoivo || isGuest },
   ];
@@ -1248,11 +1241,11 @@ export default function HomePage() {
       });
       if (mode === 'shared') {
         setMsg(
-          'WhatsApp aberto na conversa do convidado — convite e link juntos.',
+          'Envie primeiro a foto do convite; o WhatsApp já abre em seguida com o link.',
         );
       } else {
         setMsg(
-          'WhatsApp aberto com o link. Anexe a imagem do convite que foi baixada.',
+          'A foto foi baixada. Anexe-a no WhatsApp e depois envie o link que já está na conversa.',
         );
       }
     } catch (e) {
@@ -1722,52 +1715,48 @@ export default function HomePage() {
                     ))}
                 </>
               )}
-              {!rsvpGrupoPendente && (
-                <>
-                  {cfg.mensagemBoasVindas ? (
-                    <p className="evento-data" style={{ fontSize: '1.05rem' }}>
-                      {String(cfg.mensagemBoasVindas)}
+              {cfg.mensagemBoasVindas ? (
+                <p className="evento-data" style={{ fontSize: '1.05rem' }}>
+                  {String(cfg.mensagemBoasVindas)}
+                </p>
+              ) : null}
+              <EventoLocais cfg={cfg} />
+              {(data?.cardapio ?? []).length > 0 && (
+                <div className="item">
+                  <h3>Cardápio</h3>
+                  {(data?.cardapio ?? []).map((i) => (
+                    <p key={i.id}>
+                      <strong>{i.titulo}</strong>
+                      {i.descricao ? ` — ${i.descricao}` : ''}
                     </p>
-                  ) : null}
-                  <EventoLocais cfg={cfg} />
-                  {(data?.cardapio ?? []).length > 0 && (
-                    <div className="item">
-                      <h3>Cardápio</h3>
-                      {(data?.cardapio ?? []).map((i) => (
-                        <p key={i.id}>
-                          <strong>{i.titulo}</strong>
-                          {i.descricao ? ` — ${i.descricao}` : ''}
-                        </p>
-                      ))}
-                    </div>
-                  )}
-                  {(data?.atracoes ?? []).length > 0 && (
-                    <div className="item">
-                      <h3>Atrações</h3>
-                      {(data?.atracoes ?? []).map((i) => (
-                        <p key={i.id}>
-                          <strong>{i.horario || '—'}</strong> · {i.titulo}
-                        </p>
-                      ))}
-                    </div>
-                  )}
-                  {precisaCadastro && (
-                    <div className="panel">
-                      <h2 style={{ marginTop: 0 }}>Crie seu cadastro</h2>
-                      <p className="hint" style={{ textAlign: 'left' }}>
-                        Assim você entra sempre com e-mail e senha, só na área de
-                        convidado.
-                      </p>
-                      <button
-                        type="button"
-                        className="primary"
-                        onClick={() => setTab('conta')}
-                      >
-                        Cadastrar e-mail e senha
-                      </button>
-                    </div>
-                  )}
-                </>
+                  ))}
+                </div>
+              )}
+              {(data?.atracoes ?? []).length > 0 && (
+                <div className="item">
+                  <h3>Atrações</h3>
+                  {(data?.atracoes ?? []).map((i) => (
+                    <p key={i.id}>
+                      <strong>{i.horario || '—'}</strong> · {i.titulo}
+                    </p>
+                  ))}
+                </div>
+              )}
+              {precisaCadastro && (
+                <div className="panel">
+                  <h2 style={{ marginTop: 0 }}>Crie seu cadastro</h2>
+                  <p className="hint" style={{ textAlign: 'left' }}>
+                    Assim você entra sempre com e-mail e senha, só na área de
+                    convidado.
+                  </p>
+                  <button
+                    type="button"
+                    className="primary"
+                    onClick={() => setTab('conta')}
+                  >
+                    Cadastrar e-mail e senha
+                  </button>
+                </div>
               )}
             </>
           )}

@@ -152,7 +152,7 @@ class _ConvidadosScreenState extends State<ConvidadosScreen> {
                     children: [
                       IconButton(
                         tooltip: 'Enviar convite no WhatsApp',
-                        icon: const Icon(Icons.videocam_outlined),
+                        icon: const Icon(Icons.photo_outlined),
                         onPressed: () => _enviarWhatsApp(context, c),
                       ),
                       IconButton(
@@ -506,16 +506,28 @@ class _ConvidadosScreenState extends State<ConvidadosScreen> {
     }
     if (code == null || !context.mounted) return;
 
+    final telefone = c.telefone.trim();
+    if (InviteMessage.normalizePhone(telefone) == null) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cadastre o telefone do convidado')),
+      );
+      return;
+    }
+
     final link = store.conviteUrl(code);
     final caption = InviteMessage.caption(link: link);
 
     try {
-      await InviteMessage.shareSlideshowAlbum(caption: caption);
+      await InviteMessage.shareConvite(
+        caption: caption,
+        telefone: telefone,
+      );
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Escolha o WhatsApp — convite, vídeo e link de confirmação.',
+            'Envie primeiro a foto; o WhatsApp abre em seguida com o link.',
           ),
         ),
       );

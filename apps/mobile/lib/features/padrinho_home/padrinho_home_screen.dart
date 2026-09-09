@@ -47,13 +47,11 @@ class PadrinhoHomeScreen extends StatelessWidget {
                     );
                   },
                 ),
-              ] else ...[
-                const EventoInfoSection(),
-              ],
-              if (store.meuConvidado?.rsvpGrupoPendente != true) ...[
                 const SizedBox(height: 28),
-                const CadastroConvidadoBlock(),
               ],
+              const EventoInfoSection(),
+              const SizedBox(height: 28),
+              const CadastroConvidadoBlock(),
               const SizedBox(height: 28),
               Text(
                 'Solicitações dos noivos',

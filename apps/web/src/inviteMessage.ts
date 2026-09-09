@@ -1,9 +1,6 @@
 /** Arte do convite (imagem) enviada no WhatsApp. */
 export const CONVITE_CARD_IMAGE = '/welcome/convite-card.jpg';
 
-/** Vídeo do slideshow de boas-vindas. */
-export const CONVITE_SLIDE_VIDEO = '/welcome/convite-slide.mp4';
-
 /**
  * Mensagem do WhatsApp: só o link clicável de confirmação.
  * O texto do convite já está na arte enviada junto.
@@ -23,7 +20,7 @@ export function normalizeWhatsAppPhone(telefone?: string | null): string | null 
   return digits;
 }
 
-/** Desktop: preferir WhatsApp Web no navegador no fallback (só texto). */
+/** Desktop: preferir WhatsApp Web no navegador. */
 export function prefersWhatsAppWeb() {
   if (typeof navigator === 'undefined') return true;
   const ua = navigator.userAgent || '';
@@ -41,14 +38,13 @@ export function whatsappConviteUrl(input: {
   const phone = normalizeWhatsAppPhone(input.telefone);
   const useWeb = input.web ?? prefersWhatsAppWeb();
 
-  if (useWeb && phone) {
+  if (!phone) {
+    throw new Error('Cadastre o telefone do convidado');
+  }
+  if (useWeb) {
     return `https://web.whatsapp.com/send?phone=${phone}&text=${text}`;
   }
-  if (phone) return `https://wa.me/${phone}?text=${text}`;
-  if (useWeb) {
-    return `https://web.whatsapp.com/send?text=${text}`;
-  }
-  return `https://api.whatsapp.com/send?text=${text}`;
+  return `https://wa.me/${phone}?text=${text}`;
 }
 
 function canShareFiles(files: File[]) {
@@ -75,74 +71,47 @@ function downloadFile(file: File) {
 }
 
 /**
- * Envia vídeo + arte do convite + link de confirmação.
- * No WhatsApp o URL sozinho vira link clicável.
+ * Envia a arte do convite + link, na conversa do telefone do convidado.
  */
 export async function shareConviteSlideshow(input: {
   caption: string;
   telefone?: string | null;
 }): Promise<'shared' | 'whatsapp-web'> {
-  const [resCard, resVideo] = await Promise.all([
-    fetch(CONVITE_CARD_IMAGE),
-    fetch(CONVITE_SLIDE_VIDEO),
-  ]);
+  const phone = normalizeWhatsAppPhone(input.telefone);
+  if (!phone) {
+    throw new Error('Cadastre o telefone do convidado');
+  }
+
+  const resCard = await fetch(CONVITE_CARD_IMAGE);
   if (!resCard.ok) throw new Error('Arte do convite não encontrada');
-  if (!resVideo.ok) throw new Error('Vídeo do convite não encontrado');
 
-  const [blobCard, blobVideo] = await Promise.all([
-    resCard.blob(),
-    resVideo.blob(),
-  ]);
-
+  const blobCard = await resCard.blob();
   const card = new File([blobCard], 'ludmila-dyego-convite.jpg', {
     type: 'image/jpeg',
   });
-  const video = new File([blobVideo], 'ludmila-dyego-convite.mp4', {
-    type: 'video/mp4',
+
+  const waUrl = whatsappConviteUrl({
+    telefone: input.telefone,
+    mensagem: input.caption,
+    web: prefersWhatsAppWeb(),
   });
-  // Ordem desejada na conversa: 1) convite  2) vídeo  3) link.
-  // O WhatsApp costuma inverter a lista de arquivos e colocar o texto no fim como legenda.
-  const files = [video, card];
-  const mensagemFallback = `(Anexe nesta ordem: 1º a imagem do convite, 2º o vídeo)\n\n${input.caption}`;
 
-  if (canShareFiles(files)) {
-    try {
-      await navigator.share({
-        files,
-        text: input.caption,
-        title: 'Convite Ludmila & Dyego',
-      });
-      return 'shared';
-    } catch (e) {
-      if (e instanceof Error && e.name === 'AbortError') throw e;
-    }
-  }
-
-  if (canShareFiles([card])) {
+  // 1º a foto (sem o link, para não virar legenda misturada)
+  if (!prefersWhatsAppWeb() && canShareFiles([card])) {
     try {
       await navigator.share({
         files: [card],
-        text: input.caption,
         title: 'Convite Ludmila & Dyego',
       });
-      downloadFile(video);
-      return 'shared';
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') throw e;
+      downloadFile(card);
     }
+  } else {
+    downloadFile(card);
   }
 
-  // Fallback: baixa na ordem correta (convite → vídeo) e abre o WhatsApp com o link.
-  downloadFile(card);
-  downloadFile(video);
-  window.open(
-    whatsappConviteUrl({
-      telefone: input.telefone,
-      mensagem: mensagemFallback,
-      web: prefersWhatsAppWeb(),
-    }),
-    '_blank',
-    'noopener,noreferrer',
-  );
-  return 'whatsapp-web';
+  // 2º o link na conversa do convidado
+  window.open(waUrl, '_blank', 'noopener,noreferrer');
+  return prefersWhatsAppWeb() ? 'whatsapp-web' : 'shared';
 }
