@@ -35,9 +35,7 @@ class ConvidadoHomeScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              const EventoInfoSection(),
-              const SizedBox(height: 28),
-              if (store.meuConvidado != null)
+              if (store.meuConvidado?.rsvpGrupoPendente == true) ...[
                 RsvpGrupoBlock(
                   convidado: store.meuConvidado!,
                   onSelect: (s, {acompanhanteId}) async {
@@ -51,19 +49,31 @@ class ConvidadoHomeScreen extends StatelessWidget {
                     }
                   },
                 ),
-              const SizedBox(height: 28),
-              const CadastroConvidadoBlock(),
-              const SizedBox(height: 28),
-              GlassMenuTile(
-                icon: Icons.card_giftcard_outlined,
-                label: 'Lista de presentes',
-                onTap: () => context.push('/presentes-guest'),
-              ),
-              GlassMenuTile(
-                icon: Icons.photo_library_outlined,
-                label: 'Fotos',
-                onTap: () => context.push('/fotos-guest'),
-              ),
+              ] else ...[
+                if (store.config.mensagemBoasVindas?.isNotEmpty == true) ...[
+                  Text(
+                    store.config.mensagemBoasVindas!,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  const SizedBox(height: 20),
+                ],
+                const EventoInfoSection(),
+              ],
+              if (store.meuConvidado?.rsvpGrupoPendente != true) ...[
+                const SizedBox(height: 28),
+                const CadastroConvidadoBlock(),
+                const SizedBox(height: 28),
+                GlassMenuTile(
+                  icon: Icons.card_giftcard_outlined,
+                  label: 'Lista de presentes',
+                  onTap: () => context.push('/presentes-guest'),
+                ),
+                GlassMenuTile(
+                  icon: Icons.photo_library_outlined,
+                  label: 'Fotos',
+                  onTap: () => context.push('/fotos-guest'),
+                ),
+              ],
             ],
           ),
         ),

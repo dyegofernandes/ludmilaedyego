@@ -45,6 +45,7 @@ import {
 import { compactarFoto } from '../image';
 import {
   buildConviteWhatsAppCaption,
+  normalizeWhatsAppPhone,
   shareConviteSlideshow,
 } from '../inviteMessage';
 
@@ -780,13 +781,26 @@ export default function HomePage() {
     return Array.isArray(lista) ? lista : [];
   }, [meuConvidado]);
 
+  const rsvpGrupoPendente = Boolean(
+    meuConvidado &&
+      (meuRsvp === 'pendente' ||
+        meusAcomps.some((a) => !a.rsvp || a.rsvp === 'pendente')),
+  );
+
   useEffect(() => {
     sessionStorage.setItem(TAB_KEY, tab);
   }, [tab]);
 
   useEffect(() => {
     if (tab === 'conta' && !isNoivo && !isGuest) setTab('resumo');
-  }, [tab, isNoivo, isGuest]);
+    if (
+      isGuest &&
+      rsvpGrupoPendente &&
+      (tab === 'presentes' || tab === 'evento' || tab === 'fotos')
+    ) {
+      setTab('resumo');
+    }
+  }, [tab, isNoivo, isGuest, rsvpGrupoPendente]);
 
   useEffect(() => {
     if (!token || !isNoivo || tab !== 'conta') return;
@@ -834,16 +848,16 @@ export default function HomePage() {
   }, [data?.despedidas, despTipo]);
 
   const nav: { id: Tab; label: string; show: boolean }[] = [
-    { id: 'resumo', label: 'Resumo', show: true },
+    { id: 'resumo', label: isGuest && rsvpGrupoPendente ? 'Confirmação' : 'Resumo', show: true },
     { id: 'gastos', label: 'Gastos', show: gestao },
     { id: 'tarefas', label: 'Tarefas', show: role !== 'convidado' },
     { id: 'agenda', label: 'Agenda', show: gestao },
     { id: 'convidados', label: 'Convidados', show: gestao },
     { id: 'padrinhos', label: 'Padrinhos', show: gestao },
-    { id: 'presentes', label: role === 'padrinho' ? 'Presentes dos padrinhos' : 'Presentes', show: true },
+    { id: 'presentes', label: role === 'padrinho' ? 'Presentes dos padrinhos' : 'Presentes', show: !isGuest || !rsvpGrupoPendente },
     { id: 'tokens', label: 'Cerimonialista', show: gestao },
-    { id: 'evento', label: 'Evento', show: true },
-    { id: 'fotos', label: 'Fotos', show: true },
+    { id: 'evento', label: 'Evento', show: gestao || !rsvpGrupoPendente },
+    { id: 'fotos', label: 'Fotos', show: !isGuest || !rsvpGrupoPendente },
     { id: 'despedida', label: 'Despedida', show: gestao },
     { id: 'conta', label: 'Conta', show: isNoivo || isGuest },
   ];
@@ -1213,6 +1227,12 @@ export default function HomePage() {
     },
   ) {
     if (!token) return;
+    const salvo = (data?.convidados ?? []).find((c) => c.id === id);
+    const telefone = String(salvo?.telefone ?? opts.telefone ?? '').trim();
+    if (!normalizeWhatsAppPhone(telefone)) {
+      setMsg('Cadastre o telefone do convidado.');
+      return;
+    }
     setBusy(true);
     try {
       const codigo = await ensureConvidadoToken(id, opts.token);
@@ -1224,15 +1244,15 @@ export default function HomePage() {
       const caption = buildConviteWhatsAppCaption({ link });
       const mode = await shareConviteSlideshow({
         caption,
-        telefone: opts.telefone,
+        telefone,
       });
       if (mode === 'shared') {
         setMsg(
-          'Escolha o WhatsApp — convite, vídeo e link de confirmação vão juntos.',
+          'WhatsApp aberto na conversa do convidado — convite e link juntos.',
         );
       } else {
         setMsg(
-          'WhatsApp aberto com o link. Anexe a imagem e o vídeo do convite que foram baixados.',
+          'WhatsApp aberto com o link. Anexe a imagem do convite que foi baixada.',
         );
       }
     } catch (e) {
@@ -1665,71 +1685,89 @@ export default function HomePage() {
         <div className="list">
           {!gestao && (
             <>
-              {cfg.mensagemBoasVindas ? (
-                <p className="evento-data" style={{ fontSize: '1.05rem' }}>
-                  {String(cfg.mensagemBoasVindas)}
-                </p>
-              ) : null}
-              <EventoLocais cfg={cfg} />
-              {(data?.cardapio ?? []).length > 0 && (
-                <div className="item">
-                  <h3>Cardápio</h3>
-                  {(data?.cardapio ?? []).map((i) => (
-                    <p key={i.id}>
-                      <strong>{i.titulo}</strong>
-                      {i.descricao ? ` — ${i.descricao}` : ''}
-                    </p>
-                  ))}
-                </div>
+              {rsvpGrupoPendente && (
+                <>
+                  {meuRsvp === 'pendente' && (
+                    <RsvpPessoa
+                      nome={
+                        meuConvidado?.nome
+                          ? `Você · ${meuConvidado.nome}`
+                          : 'Você'
+                      }
+                      detalhe="Confirme sua presença"
+                      atual={meuRsvp}
+                      busy={busy}
+                      onSelect={(s) => onRsvp(s)}
+                    />
+                  )}
+                  {meusAcomps
+                    .filter((a) => !a.rsvp || a.rsvp === 'pendente')
+                    .map((a, i) => (
+                      <RsvpPessoa
+                        key={a.id || `${a.nome}-${i}`}
+                        nome={a.nome}
+                        detalhe={`Acompanhante · ${
+                          a.tipo === 'filho'
+                            ? 'criança'
+                            : ACOMP_TIPO_LABEL[
+                                normalizeAcompTipo(a.tipo)
+                              ].toLowerCase()
+                        } — confirme a presença desta pessoa`}
+                        atual={a.rsvp || 'pendente'}
+                        busy={busy || !a.id}
+                        onSelect={(s) => {
+                          if (a.id) void onRsvp(s, a.id);
+                        }}
+                      />
+                    ))}
+                </>
               )}
-              {(data?.atracoes ?? []).length > 0 && (
-                <div className="item">
-                  <h3>Atrações</h3>
-                  {(data?.atracoes ?? []).map((i) => (
-                    <p key={i.id}>
-                      <strong>{i.horario || '—'}</strong> · {i.titulo}
+              {!rsvpGrupoPendente && (
+                <>
+                  {cfg.mensagemBoasVindas ? (
+                    <p className="evento-data" style={{ fontSize: '1.05rem' }}>
+                      {String(cfg.mensagemBoasVindas)}
                     </p>
-                  ))}
-                </div>
-              )}
-              <RsvpPessoa
-                nome={meuConvidado?.nome ? `Você · ${meuConvidado.nome}` : 'Você'}
-                detalhe="Confirme sua presença"
-                atual={meuRsvp}
-                busy={busy}
-                onSelect={(s) => onRsvp(s)}
-              />
-              {meusAcomps.map((a, i) => (
-                <RsvpPessoa
-                  key={a.id || `${a.nome}-${i}`}
-                  nome={a.nome}
-                  detalhe={`Acompanhante · ${
-                    a.tipo === 'filho'
-                      ? 'criança'
-                      : ACOMP_TIPO_LABEL[normalizeAcompTipo(a.tipo)].toLowerCase()
-                  } — confirme a presença desta pessoa`}
-                  atual={a.rsvp || 'pendente'}
-                  busy={busy || !a.id}
-                  onSelect={(s) => {
-                    if (a.id) void onRsvp(s, a.id);
-                  }}
-                />
-              ))}
-              {precisaCadastro && (
-                <div className="panel">
-                  <h2 style={{ marginTop: 0 }}>Crie seu cadastro</h2>
-                  <p className="hint" style={{ textAlign: 'left' }}>
-                    Assim você entra sempre com e-mail e senha, só na área de
-                    convidado.
-                  </p>
-                  <button
-                    type="button"
-                    className="primary"
-                    onClick={() => setTab('conta')}
-                  >
-                    Cadastrar e-mail e senha
-                  </button>
-                </div>
+                  ) : null}
+                  <EventoLocais cfg={cfg} />
+                  {(data?.cardapio ?? []).length > 0 && (
+                    <div className="item">
+                      <h3>Cardápio</h3>
+                      {(data?.cardapio ?? []).map((i) => (
+                        <p key={i.id}>
+                          <strong>{i.titulo}</strong>
+                          {i.descricao ? ` — ${i.descricao}` : ''}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                  {(data?.atracoes ?? []).length > 0 && (
+                    <div className="item">
+                      <h3>Atrações</h3>
+                      {(data?.atracoes ?? []).map((i) => (
+                        <p key={i.id}>
+                          <strong>{i.horario || '—'}</strong> · {i.titulo}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                  {precisaCadastro && (
+                    <div className="panel">
+                      <h2 style={{ marginTop: 0 }}>Crie seu cadastro</h2>
+                      <p className="hint" style={{ textAlign: 'left' }}>
+                        Assim você entra sempre com e-mail e senha, só na área de
+                        convidado.
+                      </p>
+                      <button
+                        type="button"
+                        className="primary"
+                        onClick={() => setTab('conta')}
+                      >
+                        Cadastrar e-mail e senha
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}

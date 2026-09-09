@@ -477,6 +477,10 @@ class Convidado {
           .where((a) => a.rsvp == RsvpStatus.sim && a.tipo.isCrianca)
           .length;
 
+  bool get rsvpGrupoPendente =>
+      rsvp == RsvpStatus.pendente ||
+      acompanhantesLista.any((a) => a.rsvp == RsvpStatus.pendente);
+
   /// Cônjuge/namorado(a) cadastrado como acompanhante, se houver.
   Acompanhante? get parceiroAcompanhante {
     for (final a in acompanhantesLista) {

@@ -136,22 +136,24 @@ class RsvpGrupoBlock extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        RsvpConfirmBlock(
-          titulo: 'Você · ${convidado.nome}',
-          subtitulo: 'Confirme sua presença',
-          atual: convidado.rsvp,
-          onSelect: (s) => onSelect(s),
-        ),
-        for (final a in convidado.acompanhantesLista) ...[
-          const SizedBox(height: 22),
+        if (convidado.rsvp == RsvpStatus.pendente)
           RsvpConfirmBlock(
-            titulo: a.nome,
-            subtitulo:
-                'Acompanhante · ${a.tipo.label} — confirme a presença desta pessoa',
-            atual: a.rsvp,
-            onSelect: (s) => onSelect(s, acompanhanteId: a.id),
+            titulo: 'Você · ${convidado.nome}',
+            subtitulo: 'Confirme sua presença',
+            atual: convidado.rsvp,
+            onSelect: (s) => onSelect(s),
           ),
-        ],
+        for (final a in convidado.acompanhantesLista)
+          if (a.rsvp == RsvpStatus.pendente) ...[
+            const SizedBox(height: 22),
+            RsvpConfirmBlock(
+              titulo: a.nome,
+              subtitulo:
+                  'Acompanhante · ${a.tipo.label} — confirme a presença desta pessoa',
+              atual: a.rsvp,
+              onSelect: (s) => onSelect(s, acompanhanteId: a.id),
+            ),
+          ],
       ],
     );
   }

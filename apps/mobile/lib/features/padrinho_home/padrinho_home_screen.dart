@@ -37,9 +37,7 @@ class PadrinhoHomeScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              const EventoInfoSection(),
-              const SizedBox(height: 28),
-              if (store.meuConvidado != null)
+              if (store.meuConvidado?.rsvpGrupoPendente == true) ...[
                 RsvpGrupoBlock(
                   convidado: store.meuConvidado!,
                   onSelect: (s, {acompanhanteId}) async {
@@ -49,8 +47,13 @@ class PadrinhoHomeScreen extends StatelessWidget {
                     );
                   },
                 ),
-              const SizedBox(height: 28),
-              const CadastroConvidadoBlock(),
+              ] else ...[
+                const EventoInfoSection(),
+              ],
+              if (store.meuConvidado?.rsvpGrupoPendente != true) ...[
+                const SizedBox(height: 28),
+                const CadastroConvidadoBlock(),
+              ],
               const SizedBox(height: 28),
               Text(
                 'Solicitações dos noivos',
