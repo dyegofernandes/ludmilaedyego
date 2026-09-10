@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/invite_message.dart';
+import '../../core/relatorio_pdf.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/brand_widgets.dart';
 import '../../data/app_store.dart';
@@ -597,6 +598,23 @@ class _ConvidadosScreenState extends State<ConvidadosScreen> {
                         style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                               color: AppColors.muted,
                             ),
+                      ),
+                      const SizedBox(height: 10),
+                      FilledButton.icon(
+                        onPressed: atual.items.isEmpty
+                            ? null
+                            : () async {
+                                await RelatorioPdf.imprimirLista(
+                                  titulo: atual.label,
+                                  items: atual.items
+                                      .map(
+                                        (p) => (nome: p.nome, meta: p.meta),
+                                      )
+                                      .toList(),
+                                );
+                              },
+                        icon: const Icon(Icons.picture_as_pdf_outlined),
+                        label: const Text('Imprimir / PDF'),
                       ),
                       const SizedBox(height: 12),
                       Expanded(

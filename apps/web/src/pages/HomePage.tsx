@@ -48,6 +48,7 @@ import {
   normalizeWhatsAppPhone,
   shareConviteSlideshow,
 } from '../inviteMessage';
+import { imprimirRelatorioLista } from '../printReport';
 
 type Tab =
   | 'resumo'
@@ -3512,13 +3513,38 @@ export default function HomePage() {
           >
             <div className="resumo-modal__head">
               <h2>{resumoDetail.title}</h2>
-              <button
-                type="button"
-                className="ghost"
-                onClick={() => setResumoDetail(null)}
-              >
-                Fechar
-              </button>
+              <div className="row" style={{ gap: 8, margin: 0 }}>
+                <button
+                  type="button"
+                  className="primary"
+                  onClick={() => {
+                    const f = resumoFiltros[resumoDetail.filterKey];
+                    if (!f) return;
+                    try {
+                      imprimirRelatorioLista({
+                        titulo: f.label,
+                        subtitulo: `${f.items.length} pessoa(s)`,
+                        items: f.items,
+                      });
+                    } catch (e) {
+                      setMsg(
+                        e instanceof Error
+                          ? e.message
+                          : 'Erro ao abrir impressão',
+                      );
+                    }
+                  }}
+                >
+                  Imprimir / PDF
+                </button>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={() => setResumoDetail(null)}
+                >
+                  Fechar
+                </button>
+              </div>
             </div>
             <label htmlFor="resumo-filtro">Filtrar</label>
             <select
