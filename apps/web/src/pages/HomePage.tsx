@@ -675,6 +675,26 @@ export default function HomePage() {
         label: 'RSVP · Pendente',
         items: pessoas((p) => p.rsvp === 'pendente'),
       },
+      relTodos: {
+        label: 'Relatório · Todos os convidados',
+        items: pessoas(() => true),
+      },
+      relConfirmados: {
+        label: 'Relatório · Já confirmaram (Sim)',
+        items: pessoas((p) => p.rsvp === 'sim'),
+      },
+      relConfEPend: {
+        label: 'Relatório · Confirmados e pendentes',
+        items: pessoas((p) => p.rsvp === 'sim' || p.rsvp === 'pendente'),
+      },
+      relFaltaConfirmar: {
+        label: 'Relatório · Falta confirmar',
+        items: pessoas((p) => p.rsvp === 'pendente'),
+      },
+      relDiferenteSim: {
+        label: 'Relatório · Diferente de Sim',
+        items: pessoas((p) => p.rsvp !== 'sim'),
+      },
       tarefas: {
         label: 'Tarefas pendentes',
         items: (data?.tarefas ?? [])
@@ -1923,62 +1943,6 @@ export default function HomePage() {
                   </div>
                 )}
               </div>
-              {resumoDetail && (
-                <div
-                  className="resumo-modal"
-                  role="dialog"
-                  aria-modal="true"
-                  onClick={() => setResumoDetail(null)}
-                >
-                  <div
-                    className="resumo-modal__panel"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="resumo-modal__head">
-                      <h2>{resumoDetail.title}</h2>
-                      <button
-                        type="button"
-                        className="ghost"
-                        onClick={() => setResumoDetail(null)}
-                      >
-                        Fechar
-                      </button>
-                    </div>
-                    <label htmlFor="resumo-filtro">Filtrar</label>
-                    <select
-                      id="resumo-filtro"
-                      value={resumoDetail.filterKey}
-                      onChange={(e) => {
-                        const key = e.target.value;
-                        const f = resumoFiltros[key];
-                        if (f) setResumoDetail({ title: f.label, filterKey: key });
-                      }}
-                    >
-                      {Object.entries(resumoFiltros).map(([key, f]) => (
-                        <option key={key} value={key}>
-                          {f.label} ({f.items.length})
-                        </option>
-                      ))}
-                    </select>
-                    <p className="hint" style={{ textAlign: 'left' }}>
-                      {(resumoFiltros[resumoDetail.filterKey]?.items.length ??
-                        0) === 0
-                        ? 'Nenhum item nesta seleção.'
-                        : `${resumoFiltros[resumoDetail.filterKey].items.length} item(ns)`}
-                    </p>
-                    <div className="resumo-nome-grid">
-                      {(resumoFiltros[resumoDetail.filterKey]?.items ?? []).map(
-                        (item, i) => (
-                          <div key={`${item.nome}-${i}`} className="resumo-nome-card">
-                            <strong>{item.nome}</strong>
-                            {item.meta ? <span>{item.meta}</span> : null}
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
             </>
           )}
         </div>
@@ -2240,6 +2204,55 @@ export default function HomePage() {
                 RSVP · Sim {pessoas.rsvpSim} · Não {pessoas.rsvpNao} · Talvez{' '}
                 {pessoas.rsvpTalvez} · Pendente {pessoas.rsvpPend}
               </p>
+            </div>
+          )}
+          {gestao && (
+            <div className="panel">
+              <h2 style={{ marginTop: 0 }}>Relatórios de convidados</h2>
+              <p className="hint" style={{ textAlign: 'left', marginTop: 0 }}>
+                Inclui titular e acompanhantes. Toque para ver a lista completa.
+              </p>
+              <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={() => openResumoDetail('relTodos')}
+                >
+                  Todos ({resumoFiltros.relTodos?.items.length ?? 0})
+                </button>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={() => openResumoDetail('relConfirmados')}
+                >
+                  Já confirmaram (
+                  {resumoFiltros.relConfirmados?.items.length ?? 0})
+                </button>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={() => openResumoDetail('relConfEPend')}
+                >
+                  Confirmados e pendentes (
+                  {resumoFiltros.relConfEPend?.items.length ?? 0})
+                </button>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={() => openResumoDetail('relFaltaConfirmar')}
+                >
+                  Falta confirmar (
+                  {resumoFiltros.relFaltaConfirmar?.items.length ?? 0})
+                </button>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={() => openResumoDetail('relDiferenteSim')}
+                >
+                  Diferente de Sim (
+                  {resumoFiltros.relDiferenteSim?.items.length ?? 0})
+                </button>
+              </div>
             </div>
           )}
           {gestao && (
@@ -3483,6 +3496,62 @@ export default function HomePage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {resumoDetail && (
+        <div
+          className="resumo-modal"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setResumoDetail(null)}
+        >
+          <div
+            className="resumo-modal__panel"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="resumo-modal__head">
+              <h2>{resumoDetail.title}</h2>
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => setResumoDetail(null)}
+              >
+                Fechar
+              </button>
+            </div>
+            <label htmlFor="resumo-filtro">Filtrar</label>
+            <select
+              id="resumo-filtro"
+              value={resumoDetail.filterKey}
+              onChange={(e) => {
+                const key = e.target.value;
+                const f = resumoFiltros[key];
+                if (f) setResumoDetail({ title: f.label, filterKey: key });
+              }}
+            >
+              {Object.entries(resumoFiltros).map(([key, f]) => (
+                <option key={key} value={key}>
+                  {f.label} ({f.items.length})
+                </option>
+              ))}
+            </select>
+            <p className="hint" style={{ textAlign: 'left' }}>
+              {(resumoFiltros[resumoDetail.filterKey]?.items.length ?? 0) === 0
+                ? 'Nenhum item nesta seleção.'
+                : `${resumoFiltros[resumoDetail.filterKey].items.length} item(ns)`}
+            </p>
+            <div className="resumo-nome-grid">
+              {(resumoFiltros[resumoDetail.filterKey]?.items ?? []).map(
+                (item, i) => (
+                  <div key={`${item.nome}-${i}`} className="resumo-nome-card">
+                    <strong>{item.nome}</strong>
+                    {item.meta ? <span>{item.meta}</span> : null}
+                  </div>
+                ),
+              )}
+            </div>
+          </div>
         </div>
       )}
 

@@ -51,6 +51,11 @@ class _ConvidadosScreenState extends State<ConvidadosScreen> {
                   ),
                 ),
                 IconButton(
+                  tooltip: 'Relatórios',
+                  onPressed: () => _abrirRelatorios(context),
+                  icon: const Icon(Icons.assessment_outlined),
+                ),
+                IconButton(
                   onPressed: () => _form(context),
                   icon: const Icon(Icons.add),
                 ),
@@ -480,6 +485,145 @@ class _ConvidadosScreenState extends State<ConvidadosScreen> {
     }
   }
 
+  List<({String nome, String meta, RsvpStatus rsvp})> _pessoasRelatorio(
+    AppStore store,
+  ) {
+    final out = <({String nome, String meta, RsvpStatus rsvp})>[];
+    for (final c in store.convidados) {
+      out.add((
+        nome: c.nome,
+        meta: '${c.rsvp.label} · ${c.ehCrianca ? 'Criança' : 'Titular'}',
+        rsvp: c.rsvp,
+      ));
+      for (final a in c.acompanhantesLista) {
+        final kid = a.tipo.isCrianca;
+        out.add((
+          nome: a.nome,
+          meta:
+              '${a.rsvp.label} · Acompanhante de ${c.nome}${kid ? ' · criança' : a.tipo.isParceiro ? ' · ${a.tipo.label.toLowerCase()}' : ''}',
+          rsvp: a.rsvp,
+        ));
+      }
+    }
+    return out;
+  }
+
+  Future<void> _abrirRelatorios(BuildContext context) async {
+    final store = context.read<AppStore>();
+    final pessoas = _pessoasRelatorio(store);
+    final relatorios = <({String key, String label, List<({String nome, String meta, RsvpStatus rsvp})> items})>[
+      (
+        key: 'todos',
+        label: 'Todos os convidados',
+        items: pessoas,
+      ),
+      (
+        key: 'confirmados',
+        label: 'Já confirmaram (Sim)',
+        items: pessoas.where((p) => p.rsvp == RsvpStatus.sim).toList(),
+      ),
+      (
+        key: 'confEPend',
+        label: 'Confirmados e pendentes',
+        items: pessoas
+            .where(
+              (p) =>
+                  p.rsvp == RsvpStatus.sim || p.rsvp == RsvpStatus.pendente,
+            )
+            .toList(),
+      ),
+      (
+        key: 'falta',
+        label: 'Falta confirmar',
+        items: pessoas.where((p) => p.rsvp == RsvpStatus.pendente).toList(),
+      ),
+      (
+        key: 'diferenteSim',
+        label: 'Diferente de Sim',
+        items: pessoas.where((p) => p.rsvp != RsvpStatus.sim).toList(),
+      ),
+    ];
+
+    if (!context.mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) {
+        var key = relatorios.first.key;
+        return StatefulBuilder(
+          builder: (ctx, setLocal) {
+            final atual = relatorios.firstWhere((r) => r.key == key);
+            return SafeArea(
+              child: SizedBox(
+                height: MediaQuery.sizeOf(ctx).height * 0.78,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Relatórios de convidados',
+                        style: Theme.of(ctx).textTheme.headlineSmall?.copyWith(
+                              color: AppColors.primaryDark,
+                            ),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: key,
+                        decoration: const InputDecoration(
+                          labelText: 'Tipo de relatório',
+                        ),
+                        items: [
+                          for (final r in relatorios)
+                            DropdownMenuItem(
+                              value: r.key,
+                              child: Text('${r.label} (${r.items.length})'),
+                            ),
+                        ],
+                        onChanged: (v) {
+                          if (v == null) return;
+                          setLocal(() => key = v);
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        atual.items.isEmpty
+                            ? 'Nenhuma pessoa nesta seleção.'
+                            : '${atual.items.length} pessoa(s)',
+                        style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                              color: AppColors.muted,
+                            ),
+                      ),
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: ListView.separated(
+                          itemCount: atual.items.length,
+                          separatorBuilder: (_, _) => const Divider(height: 1),
+                          itemBuilder: (_, i) {
+                            final p = atual.items[i];
+                            return ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(p.nome),
+                              subtitle: Text(p.meta),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _copiarLink(BuildContext context, Convidado c) async {
     final store = context.read<AppStore>();
     var code = c.token;
@@ -506,7 +650,7 @@ class _ConvidadosScreenState extends State<ConvidadosScreen> {
     }
     if (code == null || !context.mounted) return;
 
-    final telefone = c.telefone.trim();
+    final telefone = (c.telefone ?? '').trim();
     if (InviteMessage.normalizePhone(telefone) == null) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

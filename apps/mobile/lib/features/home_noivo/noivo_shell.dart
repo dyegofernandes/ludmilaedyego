@@ -182,6 +182,33 @@ List<_ResumoFiltro> _buildResumoFiltros(AppStore store) {
       pessoasWhere((p) => p.rsvp == RsvpStatus.pendente),
     ),
     _ResumoFiltro(
+      'relTodos',
+      'Relatório · Todos os convidados',
+      pessoasWhere((_) => true),
+    ),
+    _ResumoFiltro(
+      'relConfirmados',
+      'Relatório · Já confirmaram (Sim)',
+      pessoasWhere((p) => p.rsvp == RsvpStatus.sim),
+    ),
+    _ResumoFiltro(
+      'relConfEPend',
+      'Relatório · Confirmados e pendentes',
+      pessoasWhere(
+        (p) => p.rsvp == RsvpStatus.sim || p.rsvp == RsvpStatus.pendente,
+      ),
+    ),
+    _ResumoFiltro(
+      'relFaltaConfirmar',
+      'Relatório · Falta confirmar',
+      pessoasWhere((p) => p.rsvp == RsvpStatus.pendente),
+    ),
+    _ResumoFiltro(
+      'relDiferenteSim',
+      'Relatório · Diferente de Sim',
+      pessoasWhere((p) => p.rsvp != RsvpStatus.sim),
+    ),
+    _ResumoFiltro(
       'tarefas',
       'Tarefas pendentes',
       store.tarefas
