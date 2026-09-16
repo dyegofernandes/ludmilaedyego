@@ -62,6 +62,24 @@ export class DataController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post('fornecedores')
+  upsertFornecedor(
+    @Req() req: { user: { userId: string } },
+    @Body() body: any,
+  ) {
+    return this.data.upsertFornecedor(req.user.userId, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('fornecedores/:id')
+  removerFornecedor(
+    @Req() req: { user: { userId: string } },
+    @Param('id') id: string,
+  ) {
+    return this.data.removerFornecedor(req.user.userId, id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post('tarefas')
   upsertTarefa(@Req() req: { user: { userId: string } }, @Body() body: any) {
     return this.data.upsertTarefa(req.user.userId, body);

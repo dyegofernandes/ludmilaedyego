@@ -12,6 +12,7 @@ import {
   deleteConvidado,
   deleteDespedidaParticipante,
   deleteFoto,
+  deleteFornecedor,
   deleteGasto,
   deletePadrinho,
   deletePresente,
@@ -27,6 +28,7 @@ import {
   upsertCompromisso,
   upsertConvidado,
   upsertDespedidaParticipante,
+  upsertFornecedor,
   upsertGasto,
   upsertPresente,
   uploadPresenteImagem,
@@ -41,6 +43,7 @@ import {
   WelcomeSlideshow,
   clearWelcomePending,
   isWelcomePending,
+  stopWelcomeAudio,
 } from '../components/WelcomeSlideshow';
 import { compactarFoto } from '../image';
 import {
@@ -53,6 +56,7 @@ import { imprimirRelatorioLista } from '../printReport';
 type Tab =
   | 'resumo'
   | 'gastos'
+  | 'fornecedores'
   | 'tarefas'
   | 'agenda'
   | 'convidados'
@@ -146,6 +150,7 @@ const TAB_KEY = 'casamento_tab';
 const TABS: Tab[] = [
   'resumo',
   'gastos',
+  'fornecedores',
   'tarefas',
   'agenda',
   'convidados',
@@ -339,6 +344,12 @@ export default function HomePage() {
   const [gastoValor, setGastoValor] = useState('');
   const [gastoStatus, setGastoStatus] = useState('pendente');
 
+  const [fornId, setFornId] = useState<string | null>(null);
+  const [fornNome, setFornNome] = useState('');
+  const [fornFuncao, setFornFuncao] = useState('');
+  const [fornTelefone, setFornTelefone] = useState('');
+  const [fornDesc, setFornDesc] = useState('');
+
   const [tarefaId, setTarefaId] = useState<string | null>(null);
   const [tarefaTitulo, setTarefaTitulo] = useState('');
   const [tarefaDesc, setTarefaDesc] = useState('');
@@ -468,6 +479,7 @@ export default function HomePage() {
     }
     if (!guest) {
       clearWelcomePending();
+      stopWelcomeAudio();
       setShowWelcome(false);
     }
   }, [user]);
@@ -813,8 +825,11 @@ export default function HomePage() {
   }, [tab]);
 
   useEffect(() => {
-    if (tab === 'conta' && !isNoivo && !isGuest) setTab('resumo');
-  }, [tab, isNoivo, isGuest]);
+    if (tab === 'conta' && !isNoivo && !isGuest) setTab('fornecedores');
+    if (role === 'cerimonialista' && (tab === 'resumo' || tab === 'gastos')) {
+      setTab('fornecedores');
+    }
+  }, [tab, isNoivo, isGuest, role]);
 
   useEffect(() => {
     if (!token || !isNoivo || tab !== 'conta') return;
@@ -862,14 +877,23 @@ export default function HomePage() {
   }, [data?.despedidas, despTipo]);
 
   const nav: { id: Tab; label: string; show: boolean }[] = [
-    { id: 'resumo', label: isGuest && rsvpGrupoPendente ? 'Confirmação' : 'Resumo', show: true },
-    { id: 'gastos', label: 'Gastos', show: gestao },
+    {
+      id: 'resumo',
+      label: isGuest && rsvpGrupoPendente ? 'Confirmação' : 'Resumo',
+      show: isNoivo || isGuest,
+    },
+    { id: 'gastos', label: 'Gastos', show: isNoivo },
+    { id: 'fornecedores', label: 'Fornecedores', show: gestao },
     { id: 'tarefas', label: 'Tarefas', show: role !== 'convidado' },
     { id: 'agenda', label: 'Agenda', show: gestao },
     { id: 'convidados', label: 'Convidados', show: gestao },
     { id: 'padrinhos', label: 'Padrinhos', show: gestao },
-    { id: 'presentes', label: role === 'padrinho' ? 'Presentes dos padrinhos' : 'Presentes', show: true },
-    { id: 'tokens', label: 'Cerimonialista', show: gestao },
+    {
+      id: 'presentes',
+      label: role === 'padrinho' ? 'Presentes dos padrinhos' : 'Presentes',
+      show: isNoivo || isGuest,
+    },
+    { id: 'tokens', label: 'Cerimonialista', show: isNoivo },
     { id: 'evento', label: 'Evento', show: gestao || isGuest },
     { id: 'fotos', label: 'Fotos', show: true },
     { id: 'despedida', label: 'Despedida', show: gestao },
@@ -897,6 +921,14 @@ export default function HomePage() {
     setGastoCat('Geral');
     setGastoValor('');
     setGastoStatus('pendente');
+  }
+
+  function resetFornecedor() {
+    setFornId(null);
+    setFornNome('');
+    setFornFuncao('');
+    setFornTelefone('');
+    setFornDesc('');
   }
 
   function resetTarefa() {
@@ -1017,6 +1049,22 @@ export default function HomePage() {
       gastoId ? 'Gasto atualizado' : 'Gasto cadastrado',
     );
     resetGasto();
+  }
+
+  async function onSaveFornecedor(e: FormEvent) {
+    e.preventDefault();
+    await run(
+      () =>
+        upsertFornecedor(token!, {
+          ...(fornId ? { id: fornId } : {}),
+          nome: fornNome,
+          funcao: fornFuncao,
+          telefone: fornTelefone,
+          descricao: fornDesc || undefined,
+        }),
+      fornId ? 'Fornecedor atualizado' : 'Fornecedor cadastrado',
+    );
+    resetFornecedor();
   }
 
   async function onSaveTarefa(e: FormEvent) {
@@ -1457,6 +1505,14 @@ export default function HomePage() {
     setGastoCat(g.categoria ?? 'Geral');
     setGastoValor(String(g.valorPrevisto ?? ''));
     setGastoStatus(g.status ?? 'pendente');
+  }
+
+  function editFornecedor(f: any) {
+    setFornId(f.id);
+    setFornNome(f.nome ?? '');
+    setFornFuncao(f.funcao ?? '');
+    setFornTelefone(f.telefone ?? '');
+    setFornDesc(f.descricao ?? '');
   }
 
   function editTarefa(t: any) {
@@ -2024,6 +2080,90 @@ export default function HomePage() {
                     disabled={busy}
                     onClick={() =>
                       run(() => deleteGasto(token!, g.id), 'Gasto excluído')
+                    }
+                  >
+                    Excluir
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === 'fornecedores' && (
+        <div className="list">
+          {gestao && (
+            <form className="panel" onSubmit={onSaveFornecedor}>
+              <h2 style={{ marginTop: 0 }}>
+                {fornId ? 'Editar fornecedor' : 'Novo fornecedor'}
+              </h2>
+              <label>Nome</label>
+              <input
+                value={fornNome}
+                onChange={(e) => setFornNome(e.target.value)}
+                required
+              />
+              <label>Função</label>
+              <input
+                value={fornFuncao}
+                onChange={(e) => setFornFuncao(e.target.value)}
+                placeholder="Ex.: buffet, decoração, DJ"
+              />
+              <label>Telefone</label>
+              <input
+                value={fornTelefone}
+                onChange={(e) => setFornTelefone(e.target.value)}
+              />
+              <label>Descrição</label>
+              <textarea
+                value={fornDesc}
+                onChange={(e) => setFornDesc(e.target.value)}
+                rows={3}
+              />
+              <div className="row">
+                <button className="primary" disabled={busy}>
+                  {fornId ? 'Salvar alterações' : 'Cadastrar fornecedor'}
+                </button>
+                {fornId && (
+                  <button
+                    type="button"
+                    className="ghost"
+                    disabled={busy}
+                    onClick={resetFornecedor}
+                  >
+                    Cancelar
+                  </button>
+                )}
+              </div>
+            </form>
+          )}
+          {(data?.fornecedores ?? []).map((f) => (
+            <div key={f.id} className="item">
+              <h3>{f.nome}</h3>
+              <p>
+                {[f.funcao, f.telefone].filter(Boolean).join(' · ') ||
+                  'Sem função/telefone'}
+              </p>
+              {f.descricao ? <p>{f.descricao}</p> : null}
+              {gestao && (
+                <div className="row">
+                  <button
+                    className="ghost"
+                    disabled={busy}
+                    onClick={() => editFornecedor(f)}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    className="ghost"
+                    style={{ color: '#b84a4a' }}
+                    disabled={busy}
+                    onClick={() =>
+                      run(
+                        () => deleteFornecedor(token!, f.id),
+                        'Fornecedor excluído',
+                      )
                     }
                   >
                     Excluir

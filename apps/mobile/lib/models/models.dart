@@ -314,6 +314,22 @@ class Gasto {
   String? observacoes;
 }
 
+class Fornecedor {
+  Fornecedor({
+    required this.id,
+    required this.nome,
+    this.funcao = '',
+    this.telefone = '',
+    this.descricao,
+  });
+
+  final String id;
+  String nome;
+  String funcao;
+  String telefone;
+  String? descricao;
+}
+
 class Tarefa {
   Tarefa({
     required this.id,

@@ -7,69 +7,71 @@ import '../../data/app_store.dart';
 import '../../models/models.dart';
 
 class PadrinhosScreen extends StatelessWidget {
-  const PadrinhosScreen({super.key});
+  const PadrinhosScreen({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
-    return Scaffold(
-      body: SoftBackground(
-        child: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      icon: const Icon(Icons.arrow_back),
-                    ),
-                    Expanded(
-                      child: Text(
-                        'Padrinhos',
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => _vincular(context),
-                      icon: const Icon(Icons.person_add_alt),
-                    ),
-                  ],
+    final body = SafeArea(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+            child: Row(
+              children: [
+                if (!embedded)
+                  IconButton(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(Icons.arrow_back),
+                  ),
+                Expanded(
+                  child: Text(
+                    'Padrinhos',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                  itemCount: store.padrinhos.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1),
-                  itemBuilder: (_, i) {
-                    final p = store.padrinhos[i];
-                    final conv = store.convidadoById(p.convidadoId);
-                    final nome = conv?.nomeComParceiro ?? '—';
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(nome),
-                      subtitle: Text(
-                        [
-                          p.tipo.label,
-                          if (conv != null) 'Lado ${conv.lado.label}',
-                          if (p.papel != null && p.papel!.isNotEmpty) p.papel!,
-                        ].join(' · '),
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.link_off, color: AppColors.danger),
-                        onPressed: () => store.removerPadrinho(p.id),
-                      ),
-                    );
-                  },
+                IconButton(
+                  onPressed: () => _vincular(context),
+                  icon: const Icon(Icons.person_add_alt),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              itemCount: store.padrinhos.length,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (_, i) {
+                final p = store.padrinhos[i];
+                final conv = store.convidadoById(p.convidadoId);
+                final nome = conv?.nomeComParceiro ?? '—';
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(nome),
+                  subtitle: Text(
+                    [
+                      p.tipo.label,
+                      if (conv != null) 'Lado ${conv.lado.label}',
+                      if (p.papel != null && p.papel!.isNotEmpty) p.papel!,
+                    ].join(' · '),
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.link_off, color: AppColors.danger),
+                    onPressed: () => store.removerPadrinho(p.id),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
+
+    if (embedded) return body;
+    return Scaffold(body: SoftBackground(child: body));
   }
 
   Future<void> _vincular(BuildContext context) async {

@@ -3,7 +3,7 @@ import { Navigate, useSearchParams } from 'react-router-dom';
 import { fetchPublicConfig } from '../api';
 import { useAuth } from '../auth';
 import { BrandLogo } from '../components/Brand';
-import { unlockWelcomeAudio } from '../components/WelcomeSlideshow';
+import { unlockWelcomeAudio, stopWelcomeAudio } from '../components/WelcomeSlideshow';
 
 export default function LoginPage() {
   const { token, login, loginWithToken } = useAuth();
@@ -41,10 +41,13 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      if (tab === 'convidados') void unlockWelcomeAudio();
       if (tab === 'noivos') await login(email, password);
-      else if (codigo.trim()) await loginWithToken(codigo);
-      else await login(email, password);
+      else if (codigo.trim()) {
+        const u = await loginWithToken(codigo);
+        const guest = u.role === 'convidado' || u.role === 'padrinho';
+        if (guest) void unlockWelcomeAudio();
+        else stopWelcomeAudio();
+      } else await login(email, password);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha no login');
     } finally {

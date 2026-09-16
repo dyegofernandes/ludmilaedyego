@@ -13,6 +13,7 @@ export type Bootstrap = {
   user: User;
   config: Record<string, unknown>;
   gastos: any[];
+  fornecedores: any[];
   tarefas: any[];
   compromissos: any[];
   convidados: any[];
@@ -158,6 +159,17 @@ export async function upsertGasto(token: string, body: Record<string, unknown>) 
 
 export async function deleteGasto(token: string, id: string) {
   return api(token, 'DELETE', `/gastos/${id}`);
+}
+
+export async function upsertFornecedor(
+  token: string,
+  body: Record<string, unknown>,
+) {
+  return api(token, 'POST', '/fornecedores', body);
+}
+
+export async function deleteFornecedor(token: string, id: string) {
+  return api(token, 'DELETE', `/fornecedores/${id}`);
 }
 
 export async function upsertTarefa(token: string, body: Record<string, unknown>) {

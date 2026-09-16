@@ -14,7 +14,7 @@ import {
   type Bootstrap,
   type User,
 } from './api';
-import { WELCOME_PENDING_KEY } from './components/WelcomeSlideshow';
+import { WELCOME_PENDING_KEY, stopWelcomeAudio } from './components/WelcomeSlideshow';
 
 type AuthCtx = {
   token: string | null;
@@ -22,8 +22,8 @@ type AuthCtx = {
   data: Bootstrap | null;
   loading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  loginWithToken: (token: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
+  loginWithToken: (token: string) => Promise<User>;
   logout: () => void;
   /** silent=true não mostra tela de loading (não desmonta a Home). */
   refresh: (silent?: boolean) => Promise<void>;
@@ -74,15 +74,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const res = await loginEmail(email, password);
     localStorage.setItem('access_token', res.accessToken);
-    sessionStorage.setItem(WELCOME_PENDING_KEY, '1');
+    const guest =
+      res.user.role === 'convidado' || res.user.role === 'padrinho';
+    if (guest) sessionStorage.setItem(WELCOME_PENDING_KEY, '1');
+    else {
+      sessionStorage.removeItem(WELCOME_PENDING_KEY);
+      stopWelcomeAudio();
+    }
     setToken(res.accessToken);
+    return res.user;
   }, []);
 
   const loginWithTokenFn = useCallback(async (tok: string) => {
     const res = await loginToken(tok);
     localStorage.setItem('access_token', res.accessToken);
-    sessionStorage.setItem(WELCOME_PENDING_KEY, '1');
+    const guest =
+      res.user.role === 'convidado' || res.user.role === 'padrinho';
+    if (guest) sessionStorage.setItem(WELCOME_PENDING_KEY, '1');
+    else {
+      sessionStorage.removeItem(WELCOME_PENDING_KEY);
+      stopWelcomeAudio();
+    }
     setToken(res.accessToken);
+    return res.user;
   }, []);
 
   const logout = () => {

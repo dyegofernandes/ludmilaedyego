@@ -155,8 +155,12 @@ export class DataService {
         data: { nomeNoivo: 'Dyego', nomeNoiva: 'Ludmila' },
       }));
 
-    const gastos = gestao
-      ? await this.prisma.gasto.findMany({ orderBy: { createdAt: 'desc' } })
+    const gastos =
+      user.role === UserRole.noivo
+        ? await this.prisma.gasto.findMany({ orderBy: { createdAt: 'desc' } })
+        : [];
+    const fornecedores = gestao
+      ? await this.prisma.fornecedor.findMany({ orderBy: { nome: 'asc' } })
       : [];
     const tarefas = await this.prisma.tarefa.findMany({
       orderBy: { createdAt: 'desc' },
@@ -242,6 +246,7 @@ export class DataService {
         valorPrevisto: this.dec(g.valorPrevisto) ?? 0,
         valorReal: this.dec(g.valorReal),
       })),
+      fornecedores,
       tarefas: tarefasVisiveis,
       compromissos,
       convidados: convidados.map((c) => this.mapConvidado(c)),
@@ -291,7 +296,8 @@ export class DataService {
   }
 
   async upsertGasto(userId: string, body: any) {
-    await this.assertGestao(userId);
+    const user = await this.requireUser(userId);
+    if (user.role !== UserRole.noivo) throw new ForbiddenException();
     const data = {
       descricao: body.descricao,
       categoria: body.categoria,
@@ -313,8 +319,29 @@ export class DataService {
   }
 
   async removerGasto(userId: string, id: string) {
-    await this.assertGestao(userId);
+    const user = await this.requireUser(userId);
+    if (user.role !== UserRole.noivo) throw new ForbiddenException();
     await this.prisma.gasto.delete({ where: { id } });
+    return { ok: true };
+  }
+
+  async upsertFornecedor(userId: string, body: any) {
+    await this.assertGestao(userId);
+    const data = {
+      nome: String(body.nome ?? '').trim(),
+      funcao: String(body.funcao ?? '').trim(),
+      telefone: String(body.telefone ?? '').trim(),
+      descricao: body.descricao?.toString()?.trim() || null,
+    };
+    if (!data.nome) throw new BadRequestException('Nome obrigatório');
+    return body.id
+      ? this.prisma.fornecedor.update({ where: { id: body.id }, data })
+      : this.prisma.fornecedor.create({ data });
+  }
+
+  async removerFornecedor(userId: string, id: string) {
+    await this.assertGestao(userId);
+    await this.prisma.fornecedor.delete({ where: { id } });
     return { ok: true };
   }
 

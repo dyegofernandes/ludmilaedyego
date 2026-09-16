@@ -26,6 +26,7 @@ class AppStore extends ChangeNotifier {
   );
 
   final List<Gasto> gastos = [];
+  final List<Fornecedor> fornecedores = [];
   final List<Tarefa> tarefas = [];
   final List<Compromisso> compromissos = [];
   final List<Convidado> convidados = [];
@@ -241,6 +242,19 @@ class AppStore extends ChangeNotifier {
           dataPrevista: _parseDate(m['dataPrevista']),
           dataPagamento: _parseDate(m['dataPagamento']),
           observacoes: m['observacoes']?.toString(),
+        );
+      }));
+
+    fornecedores
+      ..clear()
+      ..addAll(((data['fornecedores'] as List?) ?? []).map((e) {
+        final m = Map<String, dynamic>.from(e as Map);
+        return Fornecedor(
+          id: m['id'].toString(),
+          nome: m['nome']?.toString() ?? '',
+          funcao: m['funcao']?.toString() ?? '',
+          telefone: m['telefone']?.toString() ?? '',
+          descricao: m['descricao']?.toString(),
         );
       }));
 
@@ -552,6 +566,7 @@ class AppStore extends ChangeNotifier {
     await _api.setToken(null);
     currentUser = null;
     gastos.clear();
+    fornecedores.clear();
     tarefas.clear();
     compromissos.clear();
     convidados.clear();
@@ -640,6 +655,32 @@ class AppStore extends ChangeNotifier {
   Future<String?> removerGasto(String id) async {
     try {
       await _api.delete('/api/gastos/$id');
+      await refreshAll();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String?> upsertFornecedor(Fornecedor f) async {
+    try {
+      await _api.post('/api/fornecedores', {
+        if (f.id.isNotEmpty && !f.id.startsWith('local-')) 'id': f.id,
+        'nome': f.nome,
+        'funcao': f.funcao,
+        'telefone': f.telefone,
+        'descricao': f.descricao,
+      });
+      await refreshAll();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String?> removerFornecedor(String id) async {
+    try {
+      await _api.delete('/api/fornecedores/$id');
       await refreshAll();
       return null;
     } catch (e) {

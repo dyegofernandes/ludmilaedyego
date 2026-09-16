@@ -120,6 +120,15 @@ model Gasto {
   createdAt     DateTime    @default(now())
 }
 
+model Fornecedor {
+  id         String   @id @default(uuid())
+  nome       String
+  funcao     String   @default("")
+  telefone   String   @default("")
+  descricao  String?
+  createdAt  DateTime @default(now())
+}
+
 model Convidado {
   id            String        @id @default(uuid())
   nome          String

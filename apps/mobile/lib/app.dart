@@ -14,6 +14,8 @@ import 'features/configuracoes/configuracoes_screen.dart';
 import 'features/convidado_home/convidado_home_screen.dart';
 import 'features/convidados/convidados_screen.dart';
 import 'features/despedida/despedida_screen.dart';
+import 'features/evento/evento_screen.dart';
+import 'features/fornecedores/fornecedores_screen.dart';
 import 'features/fotos/fotos_screen.dart';
 import 'features/gastos/gastos_screen.dart';
 import 'features/home_noivo/noivo_shell.dart';
@@ -86,6 +88,11 @@ class _CasamentoAppState extends State<CasamentoApp> {
           builder: (_, _) => const PadrinhoHomeScreen(),
         ),
         GoRoute(path: '/gastos', builder: (_, _) => const GastosScreen()),
+        GoRoute(
+          path: '/fornecedores',
+          builder: (_, _) => const FornecedoresScreen(),
+        ),
+        GoRoute(path: '/evento', builder: (_, _) => const EventoScreen()),
         GoRoute(path: '/tarefas', builder: (_, _) => const TarefasScreen()),
         GoRoute(path: '/agenda', builder: (_, _) => const AgendaScreen()),
         GoRoute(

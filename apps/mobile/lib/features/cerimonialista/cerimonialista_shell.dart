@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/formatters.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/brand_widgets.dart';
-import '../../core/widgets/evento_info.dart';
 import '../../data/app_store.dart';
-import '../../models/models.dart';
-import '../agenda/agenda_screen.dart';
+import '../convidados/convidados_screen.dart';
+import '../fornecedores/fornecedores_screen.dart';
+import '../padrinhos/padrinhos_screen.dart';
 import '../tarefas/tarefas_screen.dart';
 
 class CerimonialistaShell extends StatefulWidget {
@@ -24,9 +23,11 @@ class _CerimonialistaShellState extends State<CerimonialistaShell> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      const _CerimonialHomeTab(),
+      const FornecedoresScreen(embedded: true),
       const TarefasScreen(embedded: true, gestaoMode: true),
-      const AgendaScreen(embedded: true),
+      const ConvidadosScreen(embedded: true),
+      const PadrinhosScreen(embedded: true),
+      const _MaisTab(),
     ];
 
     return Scaffold(
@@ -36,9 +37,9 @@ class _CerimonialistaShellState extends State<CerimonialistaShell> {
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Início',
+            icon: Icon(Icons.storefront_outlined),
+            selectedIcon: Icon(Icons.storefront),
+            label: 'Fornecedores',
           ),
           NavigationDestination(
             icon: Icon(Icons.task_alt_outlined),
@@ -46,9 +47,19 @@ class _CerimonialistaShellState extends State<CerimonialistaShell> {
             label: 'Tarefas',
           ),
           NavigationDestination(
-            icon: Icon(Icons.calendar_month_outlined),
-            selectedIcon: Icon(Icons.calendar_month),
-            label: 'Agenda',
+            icon: Icon(Icons.people_outline),
+            selectedIcon: Icon(Icons.people),
+            label: 'Convidados',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.favorite_outline),
+            selectedIcon: Icon(Icons.favorite),
+            label: 'Padrinhos',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.more_horiz),
+            selectedIcon: Icon(Icons.more_horiz),
+            label: 'Mais',
           ),
         ],
       ),
@@ -56,19 +67,16 @@ class _CerimonialistaShellState extends State<CerimonialistaShell> {
   }
 }
 
-class _CerimonialHomeTab extends StatelessWidget {
-  const _CerimonialHomeTab();
+class _MaisTab extends StatelessWidget {
+  const _MaisTab();
 
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
-    final paraNoivos = store.tarefas
-        .where((t) =>
-            t.destino == DestinoTarefa.noivos &&
-            t.status != TarefaStatus.feito &&
-            t.status != TarefaStatus.cancelado)
-        .length;
-    final proximos = store.compromissosProximos();
+    final items = [
+      ('Evento', Icons.celebration_outlined, '/evento'),
+      ('Fotos', Icons.photo_library_outlined, '/fotos'),
+    ];
 
     return SafeArea(
       child: ListView(
@@ -76,8 +84,7 @@ class _CerimonialHomeTab extends StatelessWidget {
         children: [
           BrandBar(
             config: store.config,
-            subtitle:
-                'Olá, ${store.currentUser?.nome ?? 'cerimonialista'}',
+            subtitle: 'Olá, ${store.currentUser?.nome ?? 'cerimonialista'}',
             trailing: IconButton(
               onPressed: () async {
                 await store.logout();
@@ -87,106 +94,21 @@ class _CerimonialHomeTab extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
+          Text('Mais', style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: 8),
           Text(
-            'Crie tarefas para os noivos e marque compromissos na agenda.',
+            'Evento e fotos do casamento.',
             style: Theme.of(context)
                 .textTheme
                 .bodyMedium
                 ?.copyWith(color: AppColors.muted),
           ),
-          const SizedBox(height: 20),
-          const EventoInfoSection(),
-          const SizedBox(height: 24),
-          _StatRow(
-            label: 'Tarefas abertas para os noivos',
-            value: '$paraNoivos',
-          ),
-          _StatRow(
-            label: 'Compromissos nos próximos 14 dias',
-            value: '${proximos.length}',
-          ),
-          const SizedBox(height: 28),
-          Text(
-            'Próximos compromissos',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          if (proximos.isEmpty)
-            Text(
-              'Nenhum compromisso marcado.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: AppColors.muted),
-            )
-          else
-            ...proximos.take(5).map(
-                  (c) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(c.titulo),
-                    subtitle: Text(
-                      [
-                        formatDateTime(c.inicio),
-                        if (c.local != null) c.local!,
-                      ].join(' · '),
-                    ),
-                  ),
-                ),
           const SizedBox(height: 16),
-          Text(
-            'Tarefas sugeridas para os noivos',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          ...store.tarefas
-              .where((t) => t.destino == DestinoTarefa.noivos)
-              .take(5)
-              .map(
-                (t) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(t.titulo),
-                  subtitle: Text(t.status.label),
-                  trailing: StatusChip(
-                    label: t.prioridade.label,
-                    color: t.prioridade == Prioridade.alta
-                        ? AppColors.accent
-                        : AppColors.primary,
-                  ),
-                ),
-              ),
-          const SizedBox(height: 12),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.celebration_outlined),
-            title: const Text('Despedida de solteiro'),
-            subtitle: const Text('Participantes do noivo e da noiva'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/despedida'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatRow extends StatelessWidget {
-  const _StatRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Expanded(child: Text(label)),
-          Text(
-            value,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              color: AppColors.primaryDark,
+          ...items.map(
+            (e) => GlassMenuTile(
+              icon: e.$2,
+              label: e.$1,
+              onTap: () => context.push(e.$3),
             ),
           ),
         ],

@@ -11,96 +11,101 @@ import '../../data/app_store.dart';
 import '../../models/models.dart';
 
 class FotosScreen extends StatelessWidget {
-  const FotosScreen({super.key, this.guestMode = false});
+  const FotosScreen({
+    super.key,
+    this.guestMode = false,
+    this.embedded = false,
+  });
 
   final bool guestMode;
+  final bool embedded;
 
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
     final list = guestMode ? store.fotosVisiveis : store.fotos;
 
-    return Scaffold(
-      body: SoftBackground(
-        child: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      icon: const Icon(Icons.arrow_back),
-                    ),
-                    Expanded(
-                      child: Text(
-                        'Fotos',
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                    ),
-                    if (!guestMode)
-                      IconButton(
-                        onPressed: () => _add(context),
-                        icon: const Icon(Icons.add_a_photo_outlined),
-                      ),
-                  ],
+    final body = SafeArea(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+            child: Row(
+              children: [
+                if (!embedded)
+                  IconButton(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(Icons.arrow_back),
+                  ),
+                Expanded(
+                  child: Text(
+                    'Fotos',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: list.isEmpty
-                    ? const Center(child: Text('Nenhuma foto ainda.'))
-                    : GridView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 10,
-                          crossAxisSpacing: 10,
-                        ),
-                        itemCount: list.length,
-                        itemBuilder: (_, i) {
-                          final f = list[i];
-                          return GestureDetector(
-                            onTap: () => _open(context, f),
-                            onLongPress:
-                                guestMode ? null : () => _edit(context, f),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  Image.network(
-                                    AppConstants.mediaUrl(f.url),
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, _, _) => Container(
-                                      color: AppColors.surfaceElevated,
-                                      child: const Icon(Icons.broken_image),
-                                    ),
-                                  ),
-                                  if (!guestMode)
-                                    Positioned(
-                                      left: 8,
-                                      bottom: 8,
-                                      child: StatusChip(
-                                        label: f.publico ? 'Pública' : 'Privada',
-                                        color: f.publico
-                                            ? AppColors.success
-                                            : AppColors.muted,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ],
+                if (!guestMode)
+                  IconButton(
+                    onPressed: () => _add(context),
+                    icon: const Icon(Icons.add_a_photo_outlined),
+                  ),
+              ],
+            ),
           ),
-        ),
+          Expanded(
+            child: list.isEmpty
+                ? const Center(child: Text('Nenhuma foto ainda.'))
+                : GridView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 10,
+                    ),
+                    itemCount: list.length,
+                    itemBuilder: (_, i) {
+                      final f = list[i];
+                      return GestureDetector(
+                        onTap: () => _open(context, f),
+                        onLongPress:
+                            guestMode ? null : () => _edit(context, f),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.network(
+                                AppConstants.mediaUrl(f.url),
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, _, _) => Container(
+                                  color: AppColors.surfaceElevated,
+                                  child: const Icon(Icons.broken_image),
+                                ),
+                              ),
+                              if (!guestMode)
+                                Positioned(
+                                  left: 8,
+                                  bottom: 8,
+                                  child: StatusChip(
+                                    label: f.publico ? 'Pública' : 'Privada',
+                                    color: f.publico
+                                        ? AppColors.success
+                                        : AppColors.muted,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
+
+    if (embedded) return body;
+    return Scaffold(body: SoftBackground(child: body));
   }
 
   Future<void> _add(BuildContext context) async {

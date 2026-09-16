@@ -640,6 +640,7 @@ class _MaisTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
+      ('Fornecedores', Icons.storefront_outlined, '/fornecedores'),
       ('Convidados', Icons.people_outline, '/convidados'),
       ('Despedida de solteiro', Icons.celebration_outlined, '/despedida'),
       ('Cerimonialista', Icons.key_outlined, '/tokens'),
