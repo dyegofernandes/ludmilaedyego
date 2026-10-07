@@ -462,6 +462,55 @@ class _SalaoScreenState extends State<SalaoScreen> {
     }
   }
 
+  Future<void> _limpar() async {
+    final store = context.read<AppStore>();
+    if (_aloc(store).isEmpty || _busy) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Limpar lugares'),
+        content: const Text(
+          'Isso tira todo mundo das cadeiras. As mesas continuam e você pode preencher de novo.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Limpar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final plano = store.planoMesas;
+    setState(() {
+      _override = const [];
+      _busy = true;
+    });
+    final err = await store.salvarPlanoMesas(
+      PlanoMesas(
+        id: plano.id,
+        mesas: plano.mesas,
+        cadeirasPorMesa: plano.cadeirasPorMesa,
+        alocacoes: const [],
+        ladoMesas: plano.ladoMesas,
+      ),
+    );
+    if (!mounted) return;
+    setState(() {
+      _override = null;
+      _busy = false;
+    });
+    if (err != null) {
+      _aviso(err);
+    } else {
+      _aviso('Lugares limpos.');
+    }
+  }
+
   Future<void> _escolherParaCadeira(
     int mesa,
     int cadeira,
@@ -697,6 +746,16 @@ class _SalaoScreenState extends State<SalaoScreen> {
                 onPressed: _busy ? null : _distribuir,
                 child: Text(
                   _aloc(store).isEmpty ? 'Distribuir' : 'Redistribuir',
+                ),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _busy || _aloc(store).isEmpty ? null : _limpar,
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Limpar lugares'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.danger,
+                  side: const BorderSide(color: AppColors.danger),
                 ),
               ),
               const SizedBox(height: 8),

@@ -403,9 +403,11 @@ export default function SalaoPage({
       await refresh(true);
     } catch (e) {
       setAviso(e instanceof Error ? e.message : 'Erro ao salvar as mesas');
+      return false;
     } finally {
       setBusy(false);
     }
+    return true;
   }
 
   async function distribuir() {
@@ -442,6 +444,19 @@ export default function SalaoPage({
     } finally {
       setBusy(false);
     }
+  }
+
+  async function limpar() {
+    if (alocacoes.length === 0 || busy) return;
+    if (
+      !window.confirm(
+        'Isso tira todo mundo das cadeiras. As mesas continuam e você pode preencher de novo. Continuar?',
+      )
+    ) {
+      return;
+    }
+    const ok = await persistir([]);
+    if (ok) setAviso('Lugares limpos. Você pode preencher de novo.');
   }
 
   function onDragStart(e: DragEvent, chave: string) {
@@ -589,6 +604,15 @@ export default function SalaoPage({
               onClick={distribuir}
             >
               {alocacoes.length > 0 ? 'Redistribuir' : 'Distribuir'}
+            </button>
+            <button
+              type="button"
+              className="danger"
+              style={{ width: '100%', marginTop: 8 }}
+              disabled={busy || alocacoes.length === 0}
+              onClick={limpar}
+            >
+              Limpar lugares
             </button>
             <button
               type="button"
