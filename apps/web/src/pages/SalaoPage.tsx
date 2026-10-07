@@ -32,6 +32,19 @@ function ladoDe(v: unknown): Lado {
   return 'ambos';
 }
 
+function semAcento(s: string) {
+  return s
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase();
+}
+
+function combinaNome(nome: string, busca: string) {
+  const q = semAcento(busca.trim());
+  if (!q) return true;
+  return semAcento(nome).includes(q);
+}
+
 function ladoLabel(lado: string) {
   if (lado === 'noivo') return 'Noivo';
   if (lado === 'noiva') return 'Noiva';
@@ -197,6 +210,12 @@ export default function SalaoPage({
   const [cadeiras, setCadeiras] = useState(base.cadeirasPorMesa);
   const [busy, setBusy] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [buscaLado, setBuscaLado] = useState('');
+  const [buscaCadeira, setBuscaCadeira] = useState('');
+  const [cadeiraAberta, setCadeiraAberta] = useState<{
+    mesa: number;
+    cadeira: number;
+  } | null>(null);
 
   useEffect(() => {
     const p: PlanoMesas = JSON.parse(planoKey);
@@ -254,6 +273,21 @@ export default function SalaoPage({
     [pessoas],
   );
 
+  const semMesa = useMemo(
+    () => confirmados.filter((p) => !p.mesa),
+    [confirmados],
+  );
+
+  const semMesaLado = useMemo(
+    () => semMesa.filter((p) => combinaNome(p.nome, buscaLado)),
+    [semMesa, buscaLado],
+  );
+
+  const semMesaCadeira = useMemo(
+    () => semMesa.filter((p) => combinaNome(p.nome, buscaCadeira)),
+    [semMesa, buscaCadeira],
+  );
+
   const porChave = useMemo(() => {
     const map = new Map<string, Pessoa>();
     for (const p of pessoas) map.set(p.chave, p);
@@ -291,6 +325,62 @@ export default function SalaoPage({
         grupos: agrupar
           ? grupos.map((g) => ({ titulo: g.titulo, items: linhas(g.pessoas) }))
           : undefined,
+      });
+    } catch (e) {
+      setAviso(e instanceof Error ? e.message : 'Erro ao abrir impressão');
+    }
+  }
+
+  function imprimirMesas() {
+    if (mesas < 1) {
+      setAviso('Distribua as mesas antes de imprimir.');
+      return;
+    }
+    const grupos: { titulo: string; items: { nome: string; meta: string }[] }[] =
+      [];
+    for (let numero = 1; numero <= mesas; numero++) {
+      const lado = ladoLabel(ladoMesas[numero - 1] || 'ambos');
+      const items = alocacoes
+        .filter((a) => a.mesa === numero)
+        .sort((a, b) => a.cadeira - b.cadeira)
+        .map((a) => {
+          const p = porChave.get(a.chave);
+          const bits = [`Cadeira ${a.cadeira}`];
+          if (p) {
+            bits.push(`Lado ${ladoLabel(p.lado)}`);
+            if (p.padrinhoLabel) bits.push(p.padrinhoLabel);
+          }
+          return { nome: p?.nome || 'Convidado', meta: bits.join(' · ') };
+        });
+      if (items.length === 0) continue;
+      grupos.push({ titulo: `Mesa ${numero} · ${lado}`, items });
+    }
+    const livres = confirmados.filter((p) => !p.mesa);
+    if (livres.length > 0) {
+      grupos.push({
+        titulo: 'Sem mesa',
+        items: livres.map((p) => ({
+          nome: p.nome,
+          meta: [
+            `Lado ${ladoLabel(p.lado)}`,
+            p.padrinhoLabel,
+            'Confirmou presença',
+          ]
+            .filter(Boolean)
+            .join(' · '),
+        })),
+      });
+    }
+    if (grupos.length === 0) {
+      setAviso('Ninguém está sentado ainda.');
+      return;
+    }
+    try {
+      imprimirRelatorioLista({
+        titulo: 'Repartição de mesas',
+        subtitulo: `${mesas} mesa(s) · ${cadeiras} cadeira(s) · ${alocacoes.length} pessoa(s) sentada(s)`,
+        items: [],
+        grupos,
       });
     } catch (e) {
       setAviso(e instanceof Error ? e.message : 'Erro ao abrir impressão');
@@ -500,6 +590,15 @@ export default function SalaoPage({
             >
               {alocacoes.length > 0 ? 'Redistribuir' : 'Distribuir'}
             </button>
+            <button
+              type="button"
+              className="ghost"
+              style={{ width: '100%', marginTop: 8 }}
+              disabled={busy || mesas < 1}
+              onClick={imprimirMesas}
+            >
+              Imprimir mesas
+            </button>
           </div>
 
           <div className="salao-board">
@@ -513,32 +612,43 @@ export default function SalaoPage({
                 void persistir(moverPessoa(alocacoes, chave, null));
               }}
             >
-              <h2 style={{ marginTop: 0 }}>Pessoas</h2>
+              <h2 style={{ marginTop: 0 }}>Sem mesa</h2>
               <p className="hint" style={{ textAlign: 'left', marginTop: 0 }}>
-                Arraste para uma cadeira. Solte aqui para tirar da mesa.
+                Quem já sentou sai desta lista. Pesquise e arraste para uma
+                cadeira, ou solte aqui para tirar da mesa.
               </p>
+              <label htmlFor="busca-lado">Pesquisar</label>
+              <input
+                id="busca-lado"
+                value={buscaLado}
+                placeholder="Nome de quem está sem mesa"
+                onChange={(e) => setBuscaLado(e.target.value)}
+              />
               <div className="salao-pessoas-lista">
-                {confirmados.map((p) => (
-                    <div
-                      key={p.chave}
-                      className="salao-chip"
-                      draggable={!busy}
-                      onDragStart={(e) => onDragStart(e, p.chave)}
-                    >
-                      <strong>{p.nome}</strong>
-                      <span>
-                        {ladoLabel(p.lado)}
-                        {p.familiaEhPadrinho && p.padrinhoLabel
-                          ? ` · ${p.padrinhoLabel}`
-                          : ''}
-                        {p.mesa
-                          ? ` · Mesa ${p.mesa}, cadeira ${p.cadeira}`
-                          : ' · Sem lugar'}
-                      </span>
-                    </div>
-                  ))}
+                {semMesaLado.map((p) => (
+                  <div
+                    key={p.chave}
+                    className="salao-chip"
+                    draggable={!busy}
+                    onDragStart={(e) => onDragStart(e, p.chave)}
+                  >
+                    <strong>{p.nome}</strong>
+                    <span>
+                      {ladoLabel(p.lado)}
+                      {p.familiaEhPadrinho && p.padrinhoLabel
+                        ? ` · ${p.padrinhoLabel}`
+                        : ''}
+                    </span>
+                  </div>
+                ))}
                 {confirmados.length === 0 && (
                   <p>Ninguém confirmou presença ainda.</p>
+                )}
+                {confirmados.length > 0 && semMesa.length === 0 && (
+                  <p>Todas as pessoas confirmadas já têm lugar.</p>
+                )}
+                {semMesa.length > 0 && semMesaLado.length === 0 && (
+                  <p>Nenhuma pessoa com esse nome.</p>
                 )}
               </div>
             </div>
@@ -601,7 +711,20 @@ export default function SalaoPage({
                                   {pessoa.nome}
                                 </strong>
                               ) : (
-                                <em>Vazia</em>
+                                <button
+                                  type="button"
+                                  className="salao-vazia"
+                                  disabled={busy}
+                                  onClick={() => {
+                                    setBuscaCadeira('');
+                                    setCadeiraAberta({
+                                      mesa: numero,
+                                      cadeira,
+                                    });
+                                  }}
+                                >
+                                  Vazia · escolher
+                                </button>
                               )}
                             </div>
                           );
@@ -612,6 +735,72 @@ export default function SalaoPage({
                 );
               })}
             </div>
+          </div>
+        </div>
+      )}
+
+      {cadeiraAberta && (
+        <div
+          className="salao-busca-modal"
+          role="presentation"
+          onClick={() => setCadeiraAberta(null)}
+        >
+          <div
+            className="panel salao-busca-painel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="busca-cadeira-titulo"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="busca-cadeira-titulo" style={{ marginTop: 0 }}>
+              Mesa {cadeiraAberta.mesa}, cadeira {cadeiraAberta.cadeira}
+            </h2>
+            <label htmlFor="busca-cadeira">
+              Pesquisar quem ainda está sem mesa
+            </label>
+            <input
+              id="busca-cadeira"
+              autoFocus
+              value={buscaCadeira}
+              placeholder="Digite o nome"
+              onChange={(e) => setBuscaCadeira(e.target.value)}
+            />
+            <div className="salao-busca-lista">
+              {semMesaCadeira.map((p) => (
+                <button
+                  key={p.chave}
+                  type="button"
+                  className="salao-busca-item"
+                  disabled={busy}
+                  onClick={() => {
+                    const destino = cadeiraAberta;
+                    setCadeiraAberta(null);
+                    void persistir(
+                      moverPessoa(alocacoes, p.chave, destino),
+                    );
+                  }}
+                >
+                  <strong>{p.nome}</strong>
+                  <span>
+                    {ladoLabel(p.lado)}
+                    {p.padrinhoLabel ? ` · ${p.padrinhoLabel}` : ''}
+                  </span>
+                </button>
+              ))}
+              {semMesa.length === 0 && (
+                <p>Todas as pessoas confirmadas já têm lugar.</p>
+              )}
+              {semMesa.length > 0 && semMesaCadeira.length === 0 && (
+                <p>Nenhuma pessoa com esse nome.</p>
+              )}
+            </div>
+            <button
+              type="button"
+              className="ghost"
+              onClick={() => setCadeiraAberta(null)}
+            >
+              Fechar
+            </button>
           </div>
         </div>
       )}

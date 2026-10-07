@@ -7,6 +7,82 @@ import '../../core/theme.dart';
 import '../../data/app_store.dart';
 import '../../models/models.dart';
 
+String _semAcento(String s) {
+  const de = 'áàâãäéèêëíìîïóòôõöúùûüçñ';
+  const para = 'aaaaaeeeeiiiiooooouuuucn';
+  var out = s.toLowerCase();
+  for (var i = 0; i < de.length; i++) {
+    out = out.replaceAll(de[i], para[i]);
+  }
+  return out;
+}
+
+class _BuscaSemMesa extends StatefulWidget {
+  const _BuscaSemMesa({required this.pessoas, required this.titulo});
+
+  final List<_Pessoa> pessoas;
+  final String titulo;
+
+  @override
+  State<_BuscaSemMesa> createState() => _BuscaSemMesaState();
+}
+
+class _BuscaSemMesaState extends State<_BuscaSemMesa> {
+  String _busca = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final termo = _semAcento(_busca.trim());
+    final lista = widget.pessoas
+        .where((p) => termo.isEmpty || _semAcento(p.nome).contains(termo))
+        .toList();
+    final altura = MediaQuery.sizeOf(context).height * 0.72;
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SizedBox(
+        height: altura,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(widget.titulo, style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              TextField(
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: 'Pesquisar quem está sem mesa',
+                ),
+                onChanged: (v) => setState(() => _busca = v),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: lista.isEmpty
+                    ? Text(
+                        widget.pessoas.isEmpty
+                            ? 'Todas as pessoas confirmadas já têm lugar.'
+                            : 'Nenhuma pessoa com esse nome.',
+                      )
+                    : ListView(
+                        children: [
+                          for (final p in lista)
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(p.nome),
+                              subtitle: Text(p.lado.label),
+                              onTap: () => Navigator.pop(context, p.chave),
+                            ),
+                        ],
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _Pessoa {
   _Pessoa({
     required this.chave,
@@ -60,6 +136,7 @@ class _SalaoScreenState extends State<SalaoScreen> {
   String _filtroFamilia = 'todas';
   bool _agrupar = true;
   bool _busy = false;
+  String _buscaLado = '';
   String? _planoAssinatura;
   List<AlocacaoMesa>? _override;
 
@@ -208,6 +285,69 @@ class _SalaoScreenState extends State<SalaoScreen> {
     );
   }
 
+  Future<void> _imprimirMesas(AppStore store) async {
+    final plano = store.planoMesas;
+    if (plano.mesas < 1) {
+      _aviso('Distribua as mesas antes de imprimir.');
+      return;
+    }
+    final pessoas = _pessoas(store);
+    final porChave = {for (final p in pessoas) p.chave: p};
+    final grupos = <GrupoRelatorio>[];
+    for (var numero = 1; numero <= plano.mesas; numero++) {
+      final lado = numero <= plano.ladoMesas.length
+          ? ladoFromDb(plano.ladoMesas[numero - 1]).label
+          : 'Ambos';
+      final daMesa = _aloc(store).where((a) => a.mesa == numero).toList()
+        ..sort((a, b) => a.cadeira.compareTo(b.cadeira));
+      if (daMesa.isEmpty) continue;
+      grupos.add((
+        titulo: 'Mesa $numero · $lado',
+        items: [
+          for (final a in daMesa)
+            (
+              nome: porChave[a.chave]?.nome ?? 'Convidado',
+              meta: [
+                'Cadeira ${a.cadeira}',
+                if (porChave[a.chave] != null)
+                  'Lado ${porChave[a.chave]!.lado.label}',
+                if (porChave[a.chave]?.padrinhoLabel != null)
+                  porChave[a.chave]!.padrinhoLabel!,
+              ].join(' · '),
+            ),
+        ],
+      ));
+    }
+    final livres = pessoas.where((p) => p.confirmado && p.mesa == null);
+    if (livres.isNotEmpty) {
+      grupos.add((
+        titulo: 'Sem mesa',
+        items: [
+          for (final p in livres)
+            (
+              nome: p.nome,
+              meta: [
+                'Lado ${p.lado.label}',
+                if (p.padrinhoLabel != null) p.padrinhoLabel!,
+                'Confirmou presença',
+              ].join(' · '),
+            ),
+        ],
+      ));
+    }
+    if (grupos.isEmpty) {
+      _aviso('Ninguém está sentado ainda.');
+      return;
+    }
+    await RelatorioPdf.imprimirLista(
+      titulo: 'Repartição de mesas',
+      subtitulo:
+          '${plano.mesas} mesa(s) · ${plano.cadeirasPorMesa} cadeira(s) · ${_aloc(store).length} pessoa(s) sentada(s)',
+      items: const [],
+      grupos: grupos,
+    );
+  }
+
   List<AlocacaoMesa> _mover(
     List<AlocacaoMesa> lista,
     String chave,
@@ -320,6 +460,22 @@ class _SalaoScreenState extends State<SalaoScreen> {
     } else {
       _aviso('Lugares distribuídos.');
     }
+  }
+
+  Future<void> _escolherParaCadeira(
+    int mesa,
+    int cadeira,
+    List<_Pessoa> semMesa,
+  ) async {
+    final chave = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => _BuscaSemMesa(
+        pessoas: semMesa,
+        titulo: 'Mesa $mesa, cadeira $cadeira',
+      ),
+    );
+    if (chave != null) await _soltar(chave, mesa, cadeira);
   }
 
   void _aviso(String texto) {
@@ -491,6 +647,11 @@ class _SalaoScreenState extends State<SalaoScreen> {
   Widget _reparticao(AppStore store, List<_Pessoa> pessoas) {
     final plano = store.planoMesas;
     final confirmados = pessoas.where((p) => p.confirmado).toList();
+    final semMesa = confirmados.where((p) => p.mesa == null).toList();
+    final termo = _semAcento(_buscaLado.trim());
+    final semMesaLado = semMesa
+        .where((p) => termo.isEmpty || _semAcento(p.nome).contains(termo))
+        .toList();
     final porChave = {for (final p in pessoas) p.chave: p};
 
     return Column(
@@ -538,6 +699,12 @@ class _SalaoScreenState extends State<SalaoScreen> {
                   _aloc(store).isEmpty ? 'Distribuir' : 'Redistribuir',
                 ),
               ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _busy ? null : () => _imprimirMesas(store),
+                icon: const Icon(Icons.picture_as_pdf_outlined),
+                label: const Text('Imprimir mesas'),
+              ),
             ],
           ),
         ),
@@ -546,7 +713,7 @@ class _SalaoScreenState extends State<SalaoScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SizedBox(
-                width: 156,
+                width: 188,
                 child: DragTarget<String>(
                   onWillAcceptWithDetails: (_) => !_busy,
                   onAcceptWithDetails: (d) => _soltar(d.data, null, null),
@@ -559,22 +726,36 @@ class _SalaoScreenState extends State<SalaoScreen> {
                         padding: const EdgeInsets.fromLTRB(12, 0, 8, 16),
                         children: [
                           Text(
-                            'Pessoas',
+                            'Sem mesa',
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Arraste para uma cadeira. Solte aqui para tirar da mesa.',
+                            'Quem já sentou sai da lista. Pesquise e arraste, ou solte aqui para tirar da mesa.',
                             style: Theme.of(context)
                                 .textTheme
                                 .bodySmall
                                 ?.copyWith(color: AppColors.muted),
                           ),
                           const SizedBox(height: 8),
+                          TextField(
+                            decoration: const InputDecoration(
+                              hintText: 'Pesquisar nome',
+                              isDense: true,
+                            ),
+                            onChanged: (v) => setState(() => _buscaLado = v),
+                          ),
+                          const SizedBox(height: 8),
                           if (confirmados.isEmpty)
                             const Text('Ninguém confirmou presença ainda.')
+                          else if (semMesa.isEmpty)
+                            const Text(
+                              'Todas as pessoas confirmadas já têm lugar.',
+                            )
+                          else if (semMesaLado.isEmpty)
+                            const Text('Nenhuma pessoa com esse nome.')
                           else
-                            for (final p in confirmados)
+                            for (final p in semMesaLado)
                               Padding(
                                 padding: const EdgeInsets.only(bottom: 8),
                                 child: Draggable<String>(
@@ -616,6 +797,7 @@ class _SalaoScreenState extends State<SalaoScreen> {
                               cadeiras: plano.cadeirasPorMesa,
                               alocacoes: _aloc(store),
                               porChave: porChave,
+                              semMesa: semMesa,
                             ),
                         ],
                       ),
@@ -628,9 +810,6 @@ class _SalaoScreenState extends State<SalaoScreen> {
   }
 
   Widget _chip(_Pessoa p) {
-    final lugar = p.mesa == null
-        ? 'Sem lugar'
-        : 'Mesa ${p.mesa}, cadeira ${p.cadeira}';
     return Material(
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(12),
@@ -651,7 +830,7 @@ class _SalaoScreenState extends State<SalaoScreen> {
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
             Text(
-              '${p.lado.label} · $lugar',
+              p.lado.label,
               style: const TextStyle(fontSize: 11, color: AppColors.muted),
             ),
           ],
@@ -677,6 +856,7 @@ class _SalaoScreenState extends State<SalaoScreen> {
     required int cadeiras,
     required List<AlocacaoMesa> alocacoes,
     required Map<String, _Pessoa> porChave,
+    required List<_Pessoa> semMesa,
   }) {
     final cor = switch (lado) {
       'noiva' => AppColors.warning,
@@ -723,6 +903,7 @@ class _SalaoScreenState extends State<SalaoScreen> {
                 cadeira: c,
                 alocacoes: alocacoes,
                 porChave: porChave,
+                semMesa: semMesa,
               ),
           ],
         ),
@@ -735,6 +916,7 @@ class _SalaoScreenState extends State<SalaoScreen> {
     required int cadeira,
     required List<AlocacaoMesa> alocacoes,
     required Map<String, _Pessoa> porChave,
+    required List<_Pessoa> semMesa,
   }) {
     AlocacaoMesa? aloc;
     for (final a in alocacoes) {
@@ -763,9 +945,14 @@ class _SalaoScreenState extends State<SalaoScreen> {
               ),
             ),
             child: nome == null
-                ? Text(
-                    'Cadeira $cadeira · Vazia',
-                    style: const TextStyle(color: AppColors.muted),
+                ? InkWell(
+                    onTap: _busy
+                        ? null
+                        : () => _escolherParaCadeira(numero, cadeira, semMesa),
+                    child: Text(
+                      'Cadeira $cadeira · Toque para escolher',
+                      style: const TextStyle(color: AppColors.muted),
+                    ),
                   )
                 : Draggable<String>(
                     data: pessoa!.chave,
