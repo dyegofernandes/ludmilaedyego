@@ -38,6 +38,7 @@ class AppStore extends ChangeNotifier {
   final List<ConviteAcesso> convites = [];
   final List<DespedidaParticipante> despedidaParticipantes = [];
   final List<DespedidaEvento> despedidas = [];
+  PlanoMesas planoMesas = const PlanoMesas();
 
   bool get isLoggedIn => currentUser != null;
   bool get isNoivo => currentUser?.isNoivo ?? false;
@@ -323,6 +324,11 @@ class AppStore extends ChangeNotifier {
         );
       }));
 
+    final planoRaw = data['planoMesas'];
+    planoMesas = PlanoMesas.fromJson(
+      planoRaw is Map ? Map<String, dynamic>.from(planoRaw) : null,
+    );
+
     fotos
       ..clear()
       ..addAll(((data['fotos'] as List?) ?? []).map((e) {
@@ -578,6 +584,7 @@ class AppStore extends ChangeNotifier {
     convites.clear();
     despedidaParticipantes.clear();
     despedidas.clear();
+    planoMesas = const PlanoMesas();
     notifyListeners();
   }
 
@@ -1052,6 +1059,29 @@ class AppStore extends ChangeNotifier {
         'confirmado': p.confirmado,
         'observacoes': p.observacoes,
         'convidadoId': p.convidadoId,
+      });
+      await refreshAll();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String?> salvarPlanoMesas(PlanoMesas plano) async {
+    try {
+      await _api.put('/api/mesas', plano.toJson());
+      await refreshAll();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String?> distribuirMesas(int mesas, int cadeirasPorMesa) async {
+    try {
+      await _api.post('/api/mesas/distribuir', {
+        'mesas': mesas,
+        'cadeirasPorMesa': cadeirasPorMesa,
       });
       await refreshAll();
       return null;

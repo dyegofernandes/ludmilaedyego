@@ -6,6 +6,7 @@ const prisma = new PrismaClient();
 async function main() {
   const passwordHash = await bcrypt.hash('123456', 10);
 
+  await prisma.planoMesas.deleteMany();
   await prisma.despedidaParticipante.deleteMany();
   await prisma.despedidaEvento.deleteMany();
   await prisma.presente.deleteMany();

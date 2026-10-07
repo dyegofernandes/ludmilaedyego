@@ -21,6 +21,12 @@ import { randomBytes } from 'crypto';
 import { existsSync, unlinkSync } from 'fs';
 import { basename, join } from 'path';
 import { publicFotoUrl } from './foto-upload';
+import {
+  AlocacaoMesa,
+  FamiliaMesa,
+  LadoMesa,
+  distribuirFamilias,
+} from './mesas';
 
 @Injectable()
 export class DataService {
@@ -216,6 +222,9 @@ export class DataService {
           orderBy: { createdAt: 'desc' },
         })
       : [];
+    const planoMesas = gestao
+      ? this.mapPlano(await this.prisma.planoMesas.findFirst())
+      : null;
 
     let tarefasVisiveis = tarefas;
     if (user.role === UserRole.padrinho) {
@@ -261,6 +270,7 @@ export class DataService {
       convites,
       despedidas,
       despedidaParticipantes,
+      planoMesas,
     };
   }
 
@@ -835,5 +845,181 @@ export class DataService {
     await this.assertGestao(userId);
     await this.prisma.despedidaParticipante.delete({ where: { id } });
     return { ok: true };
+  }
+
+  async salvarPlanoMesas(userId: string, body: any) {
+    await this.assertGestao(userId);
+    const mesas = this.limiteInteiro(body.mesas, 100);
+    const cadeirasPorMesa = this.limiteInteiro(body.cadeirasPorMesa, 40);
+    const convidados = await this.prisma.convidado.findMany();
+    const validas = this.chavesConfirmadas(convidados);
+    const alocacoes =
+      mesas < 1 || cadeirasPorMesa < 1
+        ? []
+        : this.sanitizeAlocacoes(
+            body.alocacoes,
+            mesas,
+            cadeirasPorMesa,
+            validas,
+          );
+    const atual = await this.prisma.planoMesas.findFirst();
+    const ladoMesas = this.sanitizeLadoMesas(
+      body.ladoMesas ?? atual?.ladoMesas,
+      mesas,
+    );
+    return this.gravarPlano(mesas, cadeirasPorMesa, alocacoes, ladoMesas);
+  }
+
+  async distribuirPlanoMesas(userId: string, body: any) {
+    await this.assertGestao(userId);
+    const mesas = this.limiteInteiro(body.mesas, 100);
+    const cadeirasPorMesa = this.limiteInteiro(body.cadeirasPorMesa, 40);
+    const convidados = await this.prisma.convidado.findMany();
+    const plano = distribuirFamilias(
+      this.familiasConfirmadas(convidados),
+      mesas,
+      cadeirasPorMesa,
+    );
+    return this.gravarPlano(
+      mesas,
+      cadeirasPorMesa,
+      plano.alocacoes,
+      plano.ladoMesas,
+    );
+  }
+
+  private limiteInteiro(v: unknown, max: number) {
+    const n = Math.floor(Number(v));
+    if (!Number.isFinite(n) || n < 0) return 0;
+    return Math.min(n, max);
+  }
+
+  private familiasConfirmadas(convidados: any[]): FamiliaMesa[] {
+    const familias: FamiliaMesa[] = [];
+    for (const c of convidados) {
+      const lado = this.ladoMesa(c.lado);
+      const pessoas: { chave: string }[] = [];
+      if (c.rsvp === RsvpStatus.sim) pessoas.push({ chave: `c:${c.id}` });
+      for (const a of this.normalizeAcomps(c.acompanhantes, c.id)) {
+        if (a.rsvp === 'sim') pessoas.push({ chave: `a:${c.id}:${a.id}` });
+      }
+      if (pessoas.length) familias.push({ lado, pessoas });
+    }
+    return familias;
+  }
+
+  private chavesConfirmadas(convidados: any[]) {
+    const set = new Set<string>();
+    for (const fam of this.familiasConfirmadas(convidados)) {
+      for (const p of fam.pessoas) set.add(p.chave);
+    }
+    return set;
+  }
+
+  private ladoMesa(v: unknown): LadoMesa {
+    if (v === 'noiva' || v === 'noivo' || v === 'ambos') return v;
+    return 'ambos';
+  }
+
+  private sanitizeAlocacoes(
+    raw: unknown,
+    mesas: number,
+    cadeiras: number,
+    validas: Set<string>,
+  ): AlocacaoMesa[] {
+    if (!Array.isArray(raw)) return [];
+    const seenChave = new Set<string>();
+    const seenSeat = new Set<string>();
+    const out: AlocacaoMesa[] = [];
+    for (const item of raw) {
+      const chave = String(item?.chave ?? '');
+      const mesa = Math.floor(Number(item?.mesa));
+      const cadeira = Math.floor(Number(item?.cadeira));
+      if (!validas.has(chave)) continue;
+      if (!Number.isFinite(mesa) || mesa < 1 || mesa > mesas) continue;
+      if (!Number.isFinite(cadeira) || cadeira < 1 || cadeira > cadeiras) {
+        continue;
+      }
+      const seat = `${mesa}:${cadeira}`;
+      if (seenChave.has(chave) || seenSeat.has(seat)) continue;
+      seenChave.add(chave);
+      seenSeat.add(seat);
+      out.push({ chave, mesa, cadeira });
+    }
+    return out;
+  }
+
+  private sanitizeLadoMesas(raw: unknown, mesas: number): LadoMesa[] {
+    const src = Array.isArray(raw) ? raw : [];
+    const out: LadoMesa[] = [];
+    for (let i = 0; i < mesas; i++) out.push(this.ladoMesa(src[i]));
+    return out;
+  }
+
+  private mapPlano(p: {
+    id: string;
+    mesas: number;
+    cadeirasPorMesa: number;
+    alocacoes: unknown;
+    ladoMesas: unknown;
+  } | null) {
+    if (!p) {
+      return {
+        id: null as string | null,
+        mesas: 0,
+        cadeirasPorMesa: 0,
+        alocacoes: [] as AlocacaoMesa[],
+        ladoMesas: [] as LadoMesa[],
+      };
+    }
+    return {
+      id: p.id,
+      mesas: p.mesas,
+      cadeirasPorMesa: p.cadeirasPorMesa,
+      alocacoes: Array.isArray(p.alocacoes) ? p.alocacoes : [],
+      ladoMesas: this.sanitizeLadoMesas(p.ladoMesas, p.mesas),
+    };
+  }
+
+  private async gravarPlano(
+    mesas: number,
+    cadeirasPorMesa: number,
+    alocacoes: AlocacaoMesa[],
+    ladoMesas: LadoMesa[],
+  ) {
+    const data = {
+      mesas,
+      cadeirasPorMesa,
+      alocacoes: alocacoes as unknown as Prisma.InputJsonValue,
+      ladoMesas: ladoMesas as unknown as Prisma.InputJsonValue,
+    };
+    const existing = await this.prisma.planoMesas.findFirst();
+    const saved = existing
+      ? await this.prisma.planoMesas.update({
+          where: { id: existing.id },
+          data,
+        })
+      : await this.prisma.planoMesas.create({ data });
+    await this.sincronizarMesaTitular(alocacoes);
+    return this.mapPlano(saved);
+  }
+
+  private async sincronizarMesaTitular(alocacoes: AlocacaoMesa[]) {
+    const porId = new Map<string, string>();
+    for (const a of alocacoes) {
+      if (a.chave.startsWith('c:')) porId.set(a.chave.slice(2), String(a.mesa));
+    }
+    const todos = await this.prisma.convidado.findMany({
+      select: { id: true, mesa: true },
+    });
+    for (const c of todos) {
+      const nova = porId.get(c.id) ?? null;
+      if ((c.mesa ?? null) !== nova) {
+        await this.prisma.convidado.update({
+          where: { id: c.id },
+          data: { mesa: nova },
+        });
+      }
+    }
   }
 }

@@ -1,18 +1,40 @@
+type LinhaRelatorio = { nome: string; meta?: string };
+
 /** Imprime / salva PDF uma lista numerada (sem depender de pop-up). */
 export function imprimirRelatorioLista(input: {
   titulo: string;
   subtitulo?: string;
-  items: { nome: string; meta?: string }[];
+  items: LinhaRelatorio[];
+  grupos?: { titulo: string; items: LinhaRelatorio[] }[];
 }) {
   const agora = new Date().toLocaleString('pt-BR');
-  const linhas = input.items
-    .map((item) => {
-      const meta = item.meta
-        ? `<span class="meta">${escapeHtml(item.meta)}</span>`
-        : '';
-      return `<li><strong>${escapeHtml(item.nome)}</strong>${meta}</li>`;
-    })
-    .join('\n');
+  const total = input.grupos
+    ? input.grupos.reduce((n, g) => n + g.items.length, 0)
+    : input.items.length;
+
+  const lista = (items: LinhaRelatorio[]) => {
+    if (items.length === 0) return '<p>Nenhuma pessoa nesta seleção.</p>';
+    const linhas = items
+      .map((item) => {
+        const meta = item.meta
+          ? `<span class="meta">${escapeHtml(item.meta)}</span>`
+          : '';
+        return `<li><strong>${escapeHtml(item.nome)}</strong>${meta}</li>`;
+      })
+      .join('\n');
+    return `<ol>${linhas}</ol>`;
+  };
+
+  const corpo = input.grupos
+    ? input.grupos.length === 0
+      ? '<p>Nenhuma pessoa nesta seleção.</p>'
+      : input.grupos
+          .map(
+            (g) =>
+              `<section class="grupo"><h2>${escapeHtml(g.titulo)}</h2>${lista(g.items)}</section>`,
+          )
+          .join('\n')
+    : lista(input.items);
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -35,6 +57,11 @@ export function imprimirRelatorioLista(input: {
       font-size: 18pt;
       margin: 0 0 4px;
       font-weight: 700;
+    }
+    h2 {
+      font-size: 13pt;
+      margin: 16px 0 8px;
+      page-break-after: avoid;
     }
     .sub {
       color: #555;
@@ -70,13 +97,9 @@ export function imprimirRelatorioLista(input: {
 <body>
   <h1>${escapeHtml(input.titulo)}</h1>
   <p class="sub">${escapeHtml(
-    input.subtitulo || `${input.items.length} pessoa(s)`,
+    input.subtitulo || `${total} pessoa(s)`,
   )} · Gerado em ${escapeHtml(agora)}</p>
-  ${
-    input.items.length === 0
-      ? '<p>Nenhuma pessoa nesta seleção.</p>'
-      : `<ol>${linhas}</ol>`
-  }
+  ${corpo}
   <p class="foot">Ludmila &amp; Dyego — relatório de convidados</p>
 </body>
 </html>`;

@@ -254,6 +254,15 @@ model DespedidaEvento {
   observacoes String?
 }
 
+model PlanoMesas {
+  id              String   @id @default(uuid())
+  mesas           Int      @default(0)
+  cadeirasPorMesa Int      @default(0)
+  alocacoes       Json     @default("[]")
+  ladoMesas       Json     @default("[]")
+  updatedAt       DateTime @updatedAt
+}
+
 model DespedidaParticipante {
   id          String        @id @default(uuid())
   nome        String

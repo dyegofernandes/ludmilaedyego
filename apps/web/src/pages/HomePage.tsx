@@ -52,6 +52,7 @@ import {
   shareConviteSlideshow,
 } from '../inviteMessage';
 import { imprimirRelatorioLista } from '../printReport';
+import SalaoPage from './SalaoPage';
 
 type Tab =
   | 'resumo'
@@ -60,6 +61,7 @@ type Tab =
   | 'tarefas'
   | 'agenda'
   | 'convidados'
+  | 'salao'
   | 'padrinhos'
   | 'presentes'
   | 'tokens'
@@ -154,6 +156,7 @@ const TABS: Tab[] = [
   'tarefas',
   'agenda',
   'convidados',
+  'salao',
   'padrinhos',
   'presentes',
   'tokens',
@@ -887,6 +890,7 @@ export default function HomePage() {
     { id: 'tarefas', label: 'Tarefas', show: role !== 'convidado' },
     { id: 'agenda', label: 'Agenda', show: gestao },
     { id: 'convidados', label: 'Convidados', show: gestao },
+    { id: 'salao', label: 'Salão', show: gestao },
     { id: 'padrinhos', label: 'Padrinhos', show: gestao },
     {
       id: 'presentes',
@@ -2326,6 +2330,14 @@ export default function HomePage() {
             </div>
           ))}
         </div>
+      )}
+
+      {tab === 'salao' && gestao && (
+        <SalaoPage
+          convidados={data?.convidados ?? []}
+          padrinhos={data?.padrinhos ?? []}
+          plano={data?.planoMesas}
+        />
       )}
 
       {tab === 'convidados' && (

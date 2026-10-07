@@ -22,6 +22,7 @@ import 'features/home_noivo/noivo_shell.dart';
 import 'features/padrinho_home/padrinho_home_screen.dart';
 import 'features/padrinhos/padrinhos_screen.dart';
 import 'features/presentes/presentes_screen.dart';
+import 'features/salao/salao_screen.dart';
 import 'features/tarefas/tarefas_screen.dart';
 import 'features/tokens/tokens_acesso_screen.dart';
 
@@ -65,6 +66,9 @@ class _CasamentoAppState extends State<CasamentoApp> {
             !(_store.isConvidado || _store.isPadrinho)) {
           return _store.homeRouteForRole();
         }
+        if (logged && loc == '/salao' && !_store.isGestao) {
+          return _store.homeRouteForRole();
+        }
         return null;
       },
       routes: [
@@ -98,6 +102,10 @@ class _CasamentoAppState extends State<CasamentoApp> {
         GoRoute(
           path: '/convidados',
           builder: (_, _) => const ConvidadosScreen(),
+        ),
+        GoRoute(
+          path: '/salao',
+          builder: (_, _) => const SalaoScreen(),
         ),
         GoRoute(
           path: '/padrinhos',

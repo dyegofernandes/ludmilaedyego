@@ -25,6 +25,21 @@ export type Bootstrap = {
   convites: any[];
   despedidas: any[];
   despedidaParticipantes: any[];
+  planoMesas?: PlanoMesas | null;
+};
+
+export type AlocacaoMesa = {
+  chave: string;
+  mesa: number;
+  cadeira: number;
+};
+
+export type PlanoMesas = {
+  id: string | null;
+  mesas: number;
+  cadeirasPorMesa: number;
+  alocacoes: AlocacaoMesa[];
+  ladoMesas: string[];
 };
 
 function authHeaders(token?: string | null): HeadersInit {
@@ -327,4 +342,15 @@ export async function atualizarFoto(
 
 export async function deleteFoto(token: string, id: string) {
   return api(token, 'DELETE', `/fotos/${id}`);
+}
+
+export async function salvarPlanoMesas(token: string, body: PlanoMesas) {
+  return api(token, 'PUT', '/mesas', body) as Promise<PlanoMesas>;
+}
+
+export async function distribuirMesas(
+  token: string,
+  body: { mesas: number; cadeirasPorMesa: number },
+) {
+  return api(token, 'POST', '/mesas/distribuir', body) as Promise<PlanoMesas>;
 }

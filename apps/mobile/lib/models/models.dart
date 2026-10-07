@@ -659,3 +659,66 @@ extension AudienciaPresenteX on AudienciaPresente {
   String get label =>
       this == AudienciaPresente.padrinhos ? 'Padrinhos' : 'Convidados';
 }
+
+class AlocacaoMesa {
+  const AlocacaoMesa({
+    required this.chave,
+    required this.mesa,
+    required this.cadeira,
+  });
+
+  final String chave;
+  final int mesa;
+  final int cadeira;
+
+  Map<String, dynamic> toJson() => {
+        'chave': chave,
+        'mesa': mesa,
+        'cadeira': cadeira,
+      };
+}
+
+class PlanoMesas {
+  const PlanoMesas({
+    this.id,
+    this.mesas = 0,
+    this.cadeirasPorMesa = 0,
+    this.alocacoes = const [],
+    this.ladoMesas = const [],
+  });
+
+  final String? id;
+  final int mesas;
+  final int cadeirasPorMesa;
+  final List<AlocacaoMesa> alocacoes;
+  final List<String> ladoMesas;
+
+  factory PlanoMesas.fromJson(Map<String, dynamic>? m) {
+    if (m == null) return const PlanoMesas();
+    final alocacoes = <AlocacaoMesa>[];
+    for (final e in (m['alocacoes'] as List?) ?? []) {
+      if (e is! Map) continue;
+      final mesa = (e['mesa'] as num?)?.toInt() ?? 0;
+      final cadeira = (e['cadeira'] as num?)?.toInt() ?? 0;
+      final chave = e['chave']?.toString() ?? '';
+      if (chave.isEmpty || mesa < 1 || cadeira < 1) continue;
+      alocacoes.add(AlocacaoMesa(chave: chave, mesa: mesa, cadeira: cadeira));
+    }
+    return PlanoMesas(
+      id: m['id']?.toString(),
+      mesas: (m['mesas'] as num?)?.toInt() ?? 0,
+      cadeirasPorMesa: (m['cadeirasPorMesa'] as num?)?.toInt() ?? 0,
+      alocacoes: alocacoes,
+      ladoMesas: ((m['ladoMesas'] as List?) ?? [])
+          .map((e) => e.toString())
+          .toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'mesas': mesas,
+        'cadeirasPorMesa': cadeirasPorMesa,
+        'alocacoes': alocacoes.map((a) => a.toJson()).toList(),
+        'ladoMesas': ladoMesas,
+      };
+}

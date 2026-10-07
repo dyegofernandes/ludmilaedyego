@@ -642,6 +642,7 @@ class _MaisTab extends StatelessWidget {
     final items = [
       ('Fornecedores', Icons.storefront_outlined, '/fornecedores'),
       ('Convidados', Icons.people_outline, '/convidados'),
+      ('Salão', Icons.table_restaurant_outlined, '/salao'),
       ('Despedida de solteiro', Icons.celebration_outlined, '/despedida'),
       ('Cerimonialista', Icons.key_outlined, '/tokens'),
       ('Presentes', Icons.card_giftcard_outlined, '/presentes'),

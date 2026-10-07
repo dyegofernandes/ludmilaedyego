@@ -289,4 +289,16 @@ export class DataController {
   ) {
     return this.data.removerDespedidaParticipante(req.user.userId, id);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('mesas')
+  salvarMesas(@Req() req: { user: { userId: string } }, @Body() body: any) {
+    return this.data.salvarPlanoMesas(req.user.userId, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('mesas/distribuir')
+  distribuirMesas(@Req() req: { user: { userId: string } }, @Body() body: any) {
+    return this.data.distribuirPlanoMesas(req.user.userId, body);
+  }
 }
