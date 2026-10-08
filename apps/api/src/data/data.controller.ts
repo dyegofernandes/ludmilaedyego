@@ -291,6 +291,21 @@ export class DataController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post('anotacoes')
+  upsertAnotacao(@Req() req: { user: { userId: string } }, @Body() body: any) {
+    return this.data.upsertAnotacao(req.user.userId, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('anotacoes/:id')
+  removerAnotacao(
+    @Req() req: { user: { userId: string } },
+    @Param('id') id: string,
+  ) {
+    return this.data.removerAnotacao(req.user.userId, id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Put('mesas')
   salvarMesas(@Req() req: { user: { userId: string } }, @Body() body: any) {
     return this.data.salvarPlanoMesas(req.user.userId, body);

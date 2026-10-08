@@ -26,6 +26,15 @@ export type Bootstrap = {
   despedidas: any[];
   despedidaParticipantes: any[];
   planoMesas?: PlanoMesas | null;
+  anotacoes?: Anotacao[];
+};
+
+export type Anotacao = {
+  id: string;
+  data: string;
+  titulo: string;
+  descricao: string;
+  createdAt?: string;
 };
 
 export type AlocacaoMesa = {
@@ -342,6 +351,17 @@ export async function atualizarFoto(
 
 export async function deleteFoto(token: string, id: string) {
   return api(token, 'DELETE', `/fotos/${id}`);
+}
+
+export async function upsertAnotacao(
+  token: string,
+  body: Record<string, unknown>,
+) {
+  return api(token, 'POST', '/anotacoes', body);
+}
+
+export async function deleteAnotacao(token: string, id: string) {
+  return api(token, 'DELETE', `/anotacoes/${id}`);
 }
 
 export async function salvarPlanoMesas(token: string, body: PlanoMesas) {

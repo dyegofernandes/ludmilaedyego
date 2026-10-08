@@ -58,6 +58,7 @@ class RelatorioPdf {
     required List<LinhaRelatorio> items,
     String? subtitulo,
     List<GrupoRelatorio>? grupos,
+    String rodape = 'relatório de convidados',
   }) async {
     final doc = pw.Document();
     final gerado = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
@@ -91,7 +92,7 @@ class RelatorioPdf {
           ],
         ),
         footer: (ctx) => pw.Text(
-          'Ludmila & Dyego — relatório de convidados · página ${ctx.pageNumber}/${ctx.pagesCount}',
+          'Ludmila & Dyego — $rodape · página ${ctx.pageNumber}/${ctx.pagesCount}',
           style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
         ),
         build: (ctx) {

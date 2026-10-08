@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'core/theme.dart';
 import 'data/app_store.dart';
 import 'features/agenda/agenda_screen.dart';
+import 'features/anotacoes/anotacoes_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/splash_screen.dart';
 import 'features/auth/welcome_slideshow_screen.dart';
@@ -69,6 +70,9 @@ class _CasamentoAppState extends State<CasamentoApp> {
         if (logged && loc == '/salao' && !_store.isGestao) {
           return _store.homeRouteForRole();
         }
+        if (logged && loc == '/anotacoes' && !_store.isGestao) {
+          return _store.homeRouteForRole();
+        }
         return null;
       },
       routes: [
@@ -106,6 +110,10 @@ class _CasamentoAppState extends State<CasamentoApp> {
         GoRoute(
           path: '/salao',
           builder: (_, _) => const SalaoScreen(),
+        ),
+        GoRoute(
+          path: '/anotacoes',
+          builder: (_, _) => const AnotacoesScreen(),
         ),
         GoRoute(
           path: '/padrinhos',

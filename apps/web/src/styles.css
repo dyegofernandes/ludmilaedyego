@@ -76,6 +76,14 @@ a {
   color: var(--gold-dark);
 }
 
+.anotacao-texto {
+  white-space: pre-wrap;
+}
+
+.anotacao-texto a {
+  text-decoration: underline;
+}
+
 .center {
   min-height: 100vh;
   display: grid;
@@ -1291,7 +1299,39 @@ button.danger {
 
 .salao-cadeira.ocupada {
   border-style: solid;
+}
+
+.salao-ocupante {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.salao-ocupante strong {
+  min-width: 0;
   cursor: grab;
+}
+
+.salao-ocupante span {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.salao-tirar {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: var(--danger);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0;
+  cursor: pointer;
 }
 
 .salao-cadeira strong {

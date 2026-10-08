@@ -38,6 +38,7 @@ class AppStore extends ChangeNotifier {
   final List<ConviteAcesso> convites = [];
   final List<DespedidaParticipante> despedidaParticipantes = [];
   final List<DespedidaEvento> despedidas = [];
+  final List<Anotacao> anotacoes = [];
   PlanoMesas planoMesas = const PlanoMesas();
 
   bool get isLoggedIn => currentUser != null;
@@ -172,6 +173,24 @@ class AppStore extends ChangeNotifier {
       return !c.inicio.isBefore(start) && c.inicio.isBefore(end);
     }).toList()
       ..sort((a, b) => a.inicio.compareTo(b.inicio));
+  }
+
+  DateTime? _parseDateOnly(dynamic v) {
+    final s = v?.toString() ?? '';
+    final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})').firstMatch(s);
+    if (match == null) return null;
+    return DateTime(
+      int.parse(match.group(1)!),
+      int.parse(match.group(2)!),
+      int.parse(match.group(3)!),
+    );
+  }
+
+  String _dataOnly(DateTime d) {
+    final y = d.year.toString().padLeft(4, '0');
+    final m = d.month.toString().padLeft(2, '0');
+    final day = d.day.toString().padLeft(2, '0');
+    return '$y-$m-$day';
   }
 
   DateTime? _parseDate(dynamic v) {
@@ -321,6 +340,19 @@ class AppStore extends ChangeNotifier {
           tipo: tipoPadrinhoFromDb(m['tipo']?.toString() ?? 'padrinho'),
           papel: m['papel']?.toString(),
           ordem: (m['ordem'] as num?)?.toInt() ?? 0,
+        );
+      }));
+
+    anotacoes
+      ..clear()
+      ..addAll(((data['anotacoes'] as List?) ?? []).map((e) {
+        final m = Map<String, dynamic>.from(e as Map);
+        return Anotacao(
+          id: m['id'].toString(),
+          data: _parseDateOnly(m['data']) ?? DateTime.now(),
+          titulo: m['titulo']?.toString() ?? '',
+          descricao: m['descricao']?.toString() ?? '',
+          createdAt: _parseDate(m['createdAt']) ?? DateTime.now(),
         );
       }));
 
@@ -584,6 +616,7 @@ class AppStore extends ChangeNotifier {
     convites.clear();
     despedidaParticipantes.clear();
     despedidas.clear();
+    anotacoes.clear();
     planoMesas = const PlanoMesas();
     notifyListeners();
   }
@@ -725,6 +758,36 @@ class AppStore extends ChangeNotifier {
         'fim': _toApiDate(c.fim),
         'local': c.local,
       });
+      await refreshAll();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String?> upsertAnotacao({
+    String? id,
+    required DateTime data,
+    required String titulo,
+    required String descricao,
+  }) async {
+    try {
+      await _api.post('/api/anotacoes', {
+        if (id != null && id.isNotEmpty) 'id': id,
+        'data': _dataOnly(data),
+        'titulo': titulo,
+        'descricao': descricao,
+      });
+      await refreshAll();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String?> removerAnotacao(String id) async {
+    try {
+      await _api.delete('/api/anotacoes/$id');
       await refreshAll();
       return null;
     } catch (e) {

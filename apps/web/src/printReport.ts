@@ -6,6 +6,7 @@ export function imprimirRelatorioLista(input: {
   subtitulo?: string;
   items: LinhaRelatorio[];
   grupos?: { titulo: string; items: LinhaRelatorio[] }[];
+  rodape?: string;
 }) {
   const agora = new Date().toLocaleString('pt-BR');
   const total = input.grupos
@@ -17,7 +18,7 @@ export function imprimirRelatorioLista(input: {
     const linhas = items
       .map((item) => {
         const meta = item.meta
-          ? `<span class="meta">${escapeHtml(item.meta)}</span>`
+          ? `<span class="meta">${linkificar(escapeHtml(item.meta))}</span>`
           : '';
         return `<li><strong>${escapeHtml(item.nome)}</strong>${meta}</li>`;
       })
@@ -100,7 +101,7 @@ export function imprimirRelatorioLista(input: {
     input.subtitulo || `${total} pessoa(s)`,
   )} · Gerado em ${escapeHtml(agora)}</p>
   ${corpo}
-  <p class="foot">Ludmila &amp; Dyego — relatório de convidados</p>
+  <p class="foot">Ludmila &amp; Dyego — ${escapeHtml(input.rodape || 'relatório de convidados')}</p>
 </body>
 </html>`;
 
@@ -162,6 +163,20 @@ export function imprimirRelatorioLista(input: {
 
   iframe.onload = () => window.setTimeout(runPrint, 80);
   window.setTimeout(runPrint, 400);
+}
+
+function linkificar(escaped: string) {
+  return escaped.replace(/(?:https?:\/\/|www\.)[^\s<]+/gi, (raw) => {
+    let url = raw;
+    let sobra = '';
+    while (url && /[.,;:!?)\]]$/.test(url)) {
+      sobra = url.slice(-1) + sobra;
+      url = url.slice(0, -1);
+    }
+    if (!url) return raw;
+    const href = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+    return `<a href="${href}">${url}</a>${sobra}`;
+  });
 }
 
 function escapeHtml(s: string) {

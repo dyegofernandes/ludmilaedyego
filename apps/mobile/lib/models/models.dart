@@ -660,6 +660,22 @@ extension AudienciaPresenteX on AudienciaPresente {
       this == AudienciaPresente.padrinhos ? 'Padrinhos' : 'Convidados';
 }
 
+class Anotacao {
+  const Anotacao({
+    required this.id,
+    required this.data,
+    required this.titulo,
+    required this.descricao,
+    required this.createdAt,
+  });
+
+  final String id;
+  final DateTime data;
+  final String titulo;
+  final String descricao;
+  final DateTime createdAt;
+}
+
 class AlocacaoMesa {
   const AlocacaoMesa({
     required this.chave,

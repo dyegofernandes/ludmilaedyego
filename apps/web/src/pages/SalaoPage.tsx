@@ -18,6 +18,7 @@ type Pessoa = {
   rsvp: string;
   familiaId: string;
   familiaNome: string;
+  titularNome: string;
   familiaEhPadrinho: boolean;
   padrinhoLabel: string | null;
   confirmado: boolean;
@@ -107,6 +108,7 @@ function pessoasDaLista(
         rsvp: rsvp || 'pendente',
         familiaId: String(c.id),
         familiaNome,
+        titularNome: String(c.nome ?? ''),
         familiaEhPadrinho,
         padrinhoLabel: extraLabel,
         confirmado: rsvp === 'sim',
@@ -130,6 +132,13 @@ function pessoasDaLista(
     }
   }
   return out;
+}
+
+function detalhePessoa(p: Pessoa) {
+  const bits = [ladoLabel(p.lado)];
+  if (p.titularNome && p.titularNome !== p.nome) bits.push(p.titularNome);
+  if (p.padrinhoLabel) bits.push(p.padrinhoLabel);
+  return bits.join(' · ');
 }
 
 function metaDe(p: Pessoa) {
@@ -348,6 +357,9 @@ export default function SalaoPage({
           const bits = [`Cadeira ${a.cadeira}`];
           if (p) {
             bits.push(`Lado ${ladoLabel(p.lado)}`);
+            if (p.titularNome && p.titularNome !== p.nome) {
+              bits.push(p.titularNome);
+            }
             if (p.padrinhoLabel) bits.push(p.padrinhoLabel);
           }
           return { nome: p?.nome || 'Convidado', meta: bits.join(' · ') };
@@ -657,12 +669,7 @@ export default function SalaoPage({
                     onDragStart={(e) => onDragStart(e, p.chave)}
                   >
                     <strong>{p.nome}</strong>
-                    <span>
-                      {ladoLabel(p.lado)}
-                      {p.familiaEhPadrinho && p.padrinhoLabel
-                        ? ` · ${p.padrinhoLabel}`
-                        : ''}
-                    </span>
+                    <span>{detalhePessoa(p)}</span>
                   </div>
                 ))}
                 {confirmados.length === 0 && (
@@ -725,15 +732,30 @@ export default function SalaoPage({
                                 Cadeira {cadeira}
                               </span>
                               {pessoa ? (
-                                <strong
-                                  draggable={!busy}
-                                  onDragStart={(e) => {
-                                    e.stopPropagation();
-                                    onDragStart(e, pessoa.chave);
-                                  }}
-                                >
-                                  {pessoa.nome}
-                                </strong>
+                                <div className="salao-ocupante">
+                                  <strong
+                                    draggable={!busy}
+                                    onDragStart={(e) => {
+                                      e.stopPropagation();
+                                      onDragStart(e, pessoa.chave);
+                                    }}
+                                  >
+                                    {pessoa.nome}
+                                    <span>{detalhePessoa(pessoa)}</span>
+                                  </strong>
+                                  <button
+                                    type="button"
+                                    className="salao-tirar"
+                                    disabled={busy}
+                                    onClick={() => {
+                                      void persistir(
+                                        moverPessoa(alocacoes, pessoa.chave, null),
+                                      );
+                                    }}
+                                  >
+                                    Tirar
+                                  </button>
+                                </div>
                               ) : (
                                 <button
                                   type="button"
@@ -805,10 +827,7 @@ export default function SalaoPage({
                   }}
                 >
                   <strong>{p.nome}</strong>
-                  <span>
-                    {ladoLabel(p.lado)}
-                    {p.padrinhoLabel ? ` · ${p.padrinhoLabel}` : ''}
-                  </span>
+                  <span>{detalhePessoa(p)}</span>
                 </button>
               ))}
               {semMesa.length === 0 && (

@@ -225,6 +225,13 @@ export class DataService {
     const planoMesas = gestao
       ? this.mapPlano(await this.prisma.planoMesas.findFirst())
       : null;
+    const anotacoes = gestao
+      ? (
+          await this.prisma.anotacao.findMany({
+            orderBy: [{ data: 'desc' }, { createdAt: 'desc' }],
+          })
+        ).map((a) => this.mapAnotacao(a))
+      : [];
 
     let tarefasVisiveis = tarefas;
     if (user.role === UserRole.padrinho) {
@@ -271,6 +278,7 @@ export class DataService {
       despedidas,
       despedidaParticipantes,
       planoMesas,
+      anotacoes,
     };
   }
 
@@ -847,6 +855,30 @@ export class DataService {
     return { ok: true };
   }
 
+  async upsertAnotacao(userId: string, body: any) {
+    await this.assertGestao(userId);
+    const titulo = String(body.titulo ?? '').trim();
+    const descricao = String(body.descricao ?? '').trim();
+    const data = this.parseDateOnly(body.data);
+    if (!titulo) throw new BadRequestException('Informe o título');
+    if (!descricao) throw new BadRequestException('Informe a descrição');
+    if (!data) throw new BadRequestException('Informe a data');
+    const payload = { titulo, descricao, data };
+    const saved = body.id
+      ? await this.prisma.anotacao.update({
+          where: { id: String(body.id) },
+          data: payload,
+        })
+      : await this.prisma.anotacao.create({ data: payload });
+    return this.mapAnotacao(saved);
+  }
+
+  async removerAnotacao(userId: string, id: string) {
+    await this.assertGestao(userId);
+    await this.prisma.anotacao.delete({ where: { id } });
+    return { ok: true };
+  }
+
   async salvarPlanoMesas(userId: string, body: any) {
     await this.assertGestao(userId);
     const mesas = this.limiteInteiro(body.mesas, 100);
@@ -954,6 +986,46 @@ export class DataService {
     const out: LadoMesa[] = [];
     for (let i = 0; i < mesas; i++) out.push(this.ladoMesa(src[i]));
     return out;
+  }
+
+  private parseDateOnly(v: unknown): Date | null {
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v ?? '').trim());
+    if (!match) return null;
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    if (
+      date.getUTCFullYear() !== year ||
+      date.getUTCMonth() !== month - 1 ||
+      date.getUTCDate() !== day
+    ) {
+      return null;
+    }
+    return date;
+  }
+
+  private formatDateOnly(d: Date) {
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  private mapAnotacao(a: {
+    id: string;
+    data: Date;
+    titulo: string;
+    descricao: string;
+    createdAt: Date;
+  }) {
+    return {
+      id: a.id,
+      data: this.formatDateOnly(a.data),
+      titulo: a.titulo,
+      descricao: a.descricao,
+      createdAt: a.createdAt,
+    };
   }
 
   private mapPlano(p: {

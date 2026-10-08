@@ -15,6 +15,7 @@ async function main() {
     process.env.BOOTSTRAP_NOIVO_EMAIL || 'dyego.fernandes.vieira@gmail.com';
   const nome = process.env.BOOTSTRAP_NOIVO_NOME || 'Dyego';
 
+  await prisma.anotacao.deleteMany();
   await prisma.planoMesas.deleteMany();
   await prisma.despedidaParticipante.deleteMany();
   await prisma.despedidaEvento.deleteMany();

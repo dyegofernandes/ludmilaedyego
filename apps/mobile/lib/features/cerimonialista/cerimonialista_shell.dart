@@ -75,6 +75,7 @@ class _MaisTab extends StatelessWidget {
     final store = context.watch<AppStore>();
     final items = [
       ('Salão', Icons.table_restaurant_outlined, '/salao'),
+      ('Anotações', Icons.sticky_note_2_outlined, '/anotacoes'),
       ('Evento', Icons.celebration_outlined, '/evento'),
       ('Fotos', Icons.photo_library_outlined, '/fotos'),
     ];
@@ -98,7 +99,7 @@ class _MaisTab extends StatelessWidget {
           Text('Mais', style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 8),
           Text(
-            'Salão, evento e fotos do casamento.',
+            'Salão, anotações, evento e fotos do casamento.',
             style: Theme.of(context)
                 .textTheme
                 .bodyMedium

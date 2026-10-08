@@ -69,7 +69,7 @@ class _BuscaSemMesaState extends State<_BuscaSemMesa> {
                             ListTile(
                               contentPadding: EdgeInsets.zero,
                               title: Text(p.nome),
-                              subtitle: Text(p.lado.label),
+                              subtitle: Text(_detalhePessoa(p)),
                               onTap: () => Navigator.pop(context, p.chave),
                             ),
                         ],
@@ -91,6 +91,7 @@ class _Pessoa {
     required this.rsvp,
     required this.familiaId,
     required this.familiaNome,
+    required this.titularNome,
     required this.familiaEhPadrinho,
     required this.confirmado,
     this.padrinhoLabel,
@@ -104,6 +105,7 @@ class _Pessoa {
   final RsvpStatus rsvp;
   final String familiaId;
   final String familiaNome;
+  final String titularNome;
   final bool familiaEhPadrinho;
   final String? padrinhoLabel;
   final bool confirmado;
@@ -119,6 +121,15 @@ class _Pessoa {
     }
     return bits.join(' · ');
   }
+}
+
+String _detalhePessoa(_Pessoa p) {
+  final bits = <String>[p.lado.label];
+  if (p.titularNome.isNotEmpty && p.titularNome != p.nome) {
+    bits.add(p.titularNome);
+  }
+  if (p.padrinhoLabel != null) bits.add(p.padrinhoLabel!);
+  return bits.join(' · ');
 }
 
 class SalaoScreen extends StatefulWidget {
@@ -191,6 +202,7 @@ class _SalaoScreenState extends State<SalaoScreen> {
             rsvp: rsvp,
             familiaId: c.id,
             familiaNome: familiaNome,
+            titularNome: c.nome,
             familiaEhPadrinho: ehPadrinho,
             padrinhoLabel: padrinhoLabel,
             confirmado: rsvp == RsvpStatus.sim,
@@ -311,6 +323,10 @@ class _SalaoScreenState extends State<SalaoScreen> {
                 'Cadeira ${a.cadeira}',
                 if (porChave[a.chave] != null)
                   'Lado ${porChave[a.chave]!.lado.label}',
+                if (porChave[a.chave] != null &&
+                    porChave[a.chave]!.titularNome.isNotEmpty &&
+                    porChave[a.chave]!.titularNome != porChave[a.chave]!.nome)
+                  porChave[a.chave]!.titularNome,
                 if (porChave[a.chave]?.padrinhoLabel != null)
                   porChave[a.chave]!.padrinhoLabel!,
               ].join(' · '),
@@ -889,7 +905,7 @@ class _SalaoScreenState extends State<SalaoScreen> {
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
             Text(
-              p.lado.label,
+              _detalhePessoa(p),
               style: const TextStyle(fontSize: 11, color: AppColors.muted),
             ),
           ],
@@ -1013,13 +1029,46 @@ class _SalaoScreenState extends State<SalaoScreen> {
                       style: const TextStyle(color: AppColors.muted),
                     ),
                   )
-                : Draggable<String>(
-                    data: pessoa!.chave,
-                    feedback: _feedback(nome),
-                    child: Text(
-                      'Cadeira $cadeira · $nome',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
+                : Row(
+                    children: [
+                      Expanded(
+                        child: Draggable<String>(
+                          data: pessoa!.chave,
+                          feedback: _feedback(nome),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Cadeira $cadeira · $nome',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              Text(
+                                _detalhePessoa(pessoa!),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.muted,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _busy
+                            ? null
+                            : () => _soltar(pessoa.chave, null, null),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.danger,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text('Tirar'),
+                      ),
+                    ],
                   ),
           );
         },
